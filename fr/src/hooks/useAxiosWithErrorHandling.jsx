@@ -1,0 +1,244 @@
+import { useCallback, useRef } from 'react';
+import axios from 'axios';
+import useErrorHandling from './useErrorHandling.jsx';
+import { useAuth } from './useAuth.jsx';
+
+// Track known 404 endpoints globally to prevent repeated requests across component remounts
+// Changed to a Map to support expiration times rather than permanent blacklisting
+const KNOWN_MISSING_ENDPOINTS = new Map();
+
+// Time to keep endpoints in the blacklist (1 minute)
+const ENDPOINT_BLACKLIST_TTL = 60000;
+
+// Clear the blacklist to allow access to newly implemented endpoints
+setInterval(() => {
+  const now = Date.now();
+  for (const [endpoint, expiryTime] of KNOWN_MISSING_ENDPOINTS.entries()) {
+    if (now > expiryTime) {
+      KNOWN_MISSING_ENDPOINTS.delete(endpoint);
+      console.log(`Removed ${endpoint} from endpoint blacklist (expired)`);
+    }
+  }
+}, 30000); // Check every 30 seconds
+
+/**
+ * Custom hook that provides an axios instance with built-in error handling
+ * 
+ * @param {Object} options - Configuration options
+ * @param {string} options.baseURL - Base URL for API requests
+ * @param {boolean} options.withCredentials - Whether to include credentials
+ * @returns {Object} - Enhanced axios instance and utility methods
+ */
+const useAxiosWithErrorHandling = (options = {}) => {
+  const {
+    baseURL = import.meta.env.VITE_API_BASE_URL || '',
+    withCredentials = false,
+  } = options;
+  
+  const { getAuthHeader } = useAuth() || {};
+  const { withErrorHandling, isLoading, error, isEndpointLimited } = useErrorHandling();
+  
+  // Track pending requests to prevent duplicates
+  const pendingRequestsRef = useRef({});
+  
+  // Create axios instance with default config
+  const axiosInstance = axios.create({
+    baseURL,
+    withCredentials,
+  });
+  
+  // Add request interceptor to include auth token and handle duplicates
+  axiosInstance.interceptors.request.use(
+    (config) => {
+      // Create a request identifier
+      const requestId = `${config.method}:${config.url}:${JSON.stringify(config.params || {})}`;
+      
+      // Check if this exact request is already pending
+      if (pendingRequestsRef.current[requestId]) {
+        const timestamp = pendingRequestsRef.current[requestId];
+        // Only block if the request was made very recently (within 500ms)
+        if (Date.now() - timestamp < 500) {
+          // Return a promise that will be canceled
+          return Promise.reject({
+            __CANCEL__: true,
+            message: 'Duplicate request canceled'
+          });
+        }
+      }
+      
+      // Mark this request as pending
+      pendingRequestsRef.current[requestId] = Date.now();
+      
+      // Cleanup function to remove from pending when complete
+      const completeRequest = () => {
+        delete pendingRequestsRef.current[requestId];
+      };
+      
+      // Add to request config so we can access it in response interceptors
+      config.__completeRequest = completeRequest;
+      
+      // Add auth headers if available
+      if (getAuthHeader) {
+        const authHeader = getAuthHeader();
+        if (authHeader.Authorization) {
+          config.headers = {
+            ...config.headers,
+            ...authHeader,
+          };
+        }
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+  
+  // Add response interceptor to cleanup pending requests
+  axiosInstance.interceptors.response.use(
+    (response) => {
+      // Call cleanup function if it exists
+      if (response.config.__completeRequest) {
+        response.config.__completeRequest();
+      }
+      return response;
+    },
+    (error) => {
+      // Call cleanup function even on error
+      if (error.config?.__completeRequest) {
+        error.config.__completeRequest();
+      }
+      
+      // Skip internal cancellation errors
+      if (error.__CANCEL__) {
+        return Promise.reject(error);
+      }
+      
+      return Promise.reject(error);
+    }
+  );
+  
+  // Helper methods with error handling
+  
+  /**
+   * GET request with error handling
+   */
+  const get = useCallback(
+    (url, config = {}, errorOptions = {}) => {
+      // Check global registry for known missing endpoints
+      if (KNOWN_MISSING_ENDPOINTS.has(url)) {
+        const expiryTime = KNOWN_MISSING_ENDPOINTS.get(url);
+        if (Date.now() < expiryTime) {
+          console.info(`GET request to known missing endpoint ${url} was prevented (will retry after ${new Date(expiryTime).toLocaleTimeString()})`);
+          return Promise.resolve(null);
+        } else {
+          // Remove expired entry
+          KNOWN_MISSING_ENDPOINTS.delete(url);
+        }
+      }
+      
+      // Check if the endpoint is rate limited before making the request
+      if (isEndpointLimited && isEndpointLimited(url)?.limited) {
+        console.warn(`GET request to ${url} was blocked due to rate limiting`);
+        // Add to global registry with expiration
+        KNOWN_MISSING_ENDPOINTS.set(url, Date.now() + ENDPOINT_BLACKLIST_TTL);
+        return Promise.resolve(null);
+      }
+      
+      return withErrorHandling(
+        () => axiosInstance.get(url, config),
+        { 
+          ...errorOptions,
+          url: url,
+          onError: (err) => {
+            // If this is a 404, add to global registry
+            if (err?.response?.status === 404) {
+              KNOWN_MISSING_ENDPOINTS.set(url, Date.now() + ENDPOINT_BLACKLIST_TTL);
+            }
+            
+            // Call original onError if provided
+            if (errorOptions.onError) {
+              errorOptions.onError(err);
+            }
+          }
+        }
+      )();
+    },
+    [axiosInstance, withErrorHandling, isEndpointLimited]
+  );
+  
+  /**
+   * POST request with error handling
+   */
+  const post = useCallback(
+    (url, data = {}, config = {}, errorOptions = {}) => {
+      return withErrorHandling(
+        () => axiosInstance.post(url, data, config),
+        {
+          ...errorOptions,
+          url: url
+        }
+      )();
+    },
+    [axiosInstance, withErrorHandling]
+  );
+  
+  /**
+   * PUT request with error handling
+   */
+  const put = useCallback(
+    (url, data = {}, config = {}, errorOptions = {}) => {
+      return withErrorHandling(
+        () => axiosInstance.put(url, data, config),
+        {
+          ...errorOptions,
+          url: url
+        }
+      )();
+    },
+    [axiosInstance, withErrorHandling]
+  );
+  
+  /**
+   * DELETE request with error handling
+   */
+  const del = useCallback(
+    (url, config = {}, errorOptions = {}) => {
+      return withErrorHandling(
+        () => axiosInstance.delete(url, config),
+        {
+          ...errorOptions,
+          url: url
+        }
+      )();
+    },
+    [axiosInstance, withErrorHandling]
+  );
+  
+  /**
+   * PATCH request with error handling
+   */
+  const patch = useCallback(
+    (url, data = {}, config = {}, errorOptions = {}) => {
+      return withErrorHandling(
+        () => axiosInstance.patch(url, data, config),
+        {
+          ...errorOptions,
+          url: url
+        }
+      )();
+    },
+    [axiosInstance, withErrorHandling]
+  );
+  
+  return {
+    axiosInstance,
+    get,
+    post,
+    put,
+    delete: del,
+    patch,
+    isLoading,
+    error,
+  };
+};
+
+export default useAxiosWithErrorHandling; 

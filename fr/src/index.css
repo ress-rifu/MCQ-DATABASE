@@ -1,0 +1,267 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: light --default, forest --prefersdark;
+}
+
+@custom-variant dark (&:where([data-theme=forest], [data-theme=forest] *));
+
+/* LaTeX Rendering Styles */
+.latex-content {
+  margin: 0.5rem 0;
+  overflow-x: auto;
+}
+
+.latex-content .katex-display {
+  margin: 0.5rem 0;
+  overflow-x: auto;
+}
+
+.latex-table {
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+
+/* Specific styling for longtable environments */
+.katex-longtable-wrapper {
+  margin: 1rem 0;
+  overflow-x: auto;
+  max-width: 100%;
+  width: 100%;
+}
+
+.katex-longtable-wrapper .katex {
+  text-align: center;
+  font-size: 0.95em; /* Slightly smaller than normal text for better fit */
+}
+
+.katex-longtable-wrapper .katex-html {
+  white-space: normal; /* Allow line breaks for better mobile display */
+}
+
+/* Improved longtable container styling */
+.longtable-container {
+  padding: 1rem;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin: 1rem 0;
+}
+
+/* Simple table fallback when KaTeX can't render */
+.simple-table-fallback {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Direct LaTeX table rendering - the most reliable fallback method */
+.direct-latex-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.direct-latex-table th {
+  background-color: #f1f5f9;
+  font-weight: 600;
+  padding: 0.75rem;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+}
+
+.direct-latex-table td {
+  padding: 0.75rem;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+}
+
+.direct-latex-table tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+.simple-latex-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.simple-latex-table td, 
+.simple-latex-table th {
+  border: 1px solid #e5e7eb;
+  padding: 0.625rem;
+  text-align: center;
+}
+
+.simple-latex-table tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.simple-latex-table tr:hover {
+  background-color: #f3f4f6;
+}
+
+.longtable-container .katex {
+  font-size: 1em !important;
+  max-width: 100%;
+}
+
+.longtable-container table {
+  margin: 0 auto;
+  border-collapse: collapse;
+  border-spacing: 0;
+  width: auto;
+  max-width: 100%;
+}
+
+.longtable-container td, 
+.longtable-container th {
+  padding: 0.5rem 1rem;
+  text-align: center;
+  border: 1px solid #e5e7eb;
+}
+
+/* Styling for elements containing LaTeX tables */
+.has-latex-table {
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  max-width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.has-latex-table::-webkit-scrollbar {
+  height: 6px;
+}
+
+.has-latex-table::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.has-latex-table::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+}
+
+/* Special styling for components containing longtables */
+.contains-longtable {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background-color: #fcfcfc;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.contains-longtable .katex {
+  font-size: 0.95em;
+}
+
+.katex-environment-wrapper {
+  margin: 1rem 0;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Make LaTeX tables visually appealing */
+.katex table {
+  border-collapse: collapse;
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+.katex th, .katex td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem;
+}
+
+.katex thead th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+}
+
+.katex tbody tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+/* Ensure that LaTeX content is responsive */
+@media (max-width: 640px) {
+  .latex-content,
+  .latex-table,
+  .katex-display {
+    font-size: 0.875rem;
+  }
+}
+
+/* Custom animations */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 2rem, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.3s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+/* Backdrop blur cross-browser support */
+.backdrop-blur {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background-color: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* For browsers not supporting backdrop-filter */
+@supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
+  .backdrop-blur {
+    background-color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* Modal content z-index */
+.modal-content-animate {
+  animation: modalScaleIn 0.2s ease-out forwards;
+  position: relative;
+  z-index: 50;
+}
+
+/* Modal backdrop animation */
+@keyframes backdropBlurIn {
+  from {
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+    background-color: rgba(0, 0, 0, 0);
+  }
+  to {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    background-color: rgba(0, 0, 0, 0.2);
+  }
+}
+
+.modal-backdrop-blur {
+  animation: backdropBlurIn 0.3s ease forwards;
+}
+
+/* Modal content animation */
+@keyframes modalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
