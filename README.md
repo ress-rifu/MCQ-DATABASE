@@ -1,170 +1,265 @@
-# Question Database Application
+# Question Database System
 
-A full-stack application for managing MCQ question databases with comprehensive import, export, and management features.
+A comprehensive question management system with frontend, backend, and PostgreSQL database integration.
+
+## Features
+
+- User authentication and role-based access control
+- Question management with support for images and multiple choice options
+- Excel/CSV import and export functionality
+- Curriculum management (Classes, Subjects, Chapters)
+- Responsive frontend built with React and Tailwind CSS
 
 ## System Requirements
 
-- Node.js (v14.0.0 or later)
-- npm (v6.0.0 or later)
-- MongoDB (v4.4 or later)
+- Node.js (v16+)
+- PostgreSQL (v12+)
+- Git
 
 ## Project Structure
 
-```
-Question Database/
-├── bk/                 # Backend code
-│   ├── controllers/    # API controllers
-│   ├── models/         # MongoDB models
-│   ├── routes/         # API routes
-│   └── server.js       # Main server file
-├── fr/                 # Frontend code
-│   ├── public/         # Static assets
-│   ├── src/            # React source code
-│   │   ├── Components/ # Reusable components
-│   │   └── Pages/      # Page components
-│   └── index.html      # Main HTML file
-└── package.json        # Root package.json for scripts
-```
+- `fr/` - Frontend React application (Vite)
+- `bk/` - Backend Express server
+- `setup-database.sql` - Database schema and initial data
 
-## Installation
+## Setup Instructions
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/ress-rifu/MCQ-DATABASE.git
-   cd "Question Database"
-   ```
-
-2. Install dependencies:
-   ```bash
-   # Root level dependencies
-   npm install
-   
-   # Frontend dependencies
-   cd fr && npm install
-   
-   # Backend dependencies
-   cd ../bk && npm install
-   ```
-
-## Database Setup
-
-This application uses MongoDB as its database. Follow these steps to set up the database:
-
-1. **Install MongoDB** - If you don't have MongoDB installed:
-   - [Download and install MongoDB Community Edition](https://www.mongodb.com/try/download/community)
-   - Or use Docker:
-     ```bash
-     docker run --name mcq-mongo -p 27017:27017 -d mongo
-     ```
-
-2. **Configure Database Connection**:
-   - Create a `.env` file in the `bk` directory with the following content:
-     ```
-     MONGODB_URI=mongodb://localhost:27017/question_database
-     PORT=5000
-     JWT_SECRET=your_secure_jwt_secret
-     ```
-   - Replace `your_secure_jwt_secret` with a strong secret key for JWT authentication
-
-3. **Initialize Database** (Optional):
-   - If you want to pre-populate the database with sample data:
-     ```bash
-     cd bk
-     npm run seed
-     ```
-
-## Running the Application
-
-### Development Mode (with Auto-Reloading)
-
-Start both frontend and backend with a single command:
+### 1. Clone the Repository
 
 ```bash
-# From the root directory
+git clone https://github.com/yourusername/question-database.git
+cd question-database
+```
+
+### 2. Database Setup
+
+1. Install PostgreSQL if not already installed
+2. Create a database:
+
+```bash
+createdb question_db
+```
+
+3. Run the setup script to create all necessary tables and initial data:
+
+```bash
+cd bk
+psql -d question_db -f setup-database.sql
+```
+
+Alternatively, you can use the Node.js setup script:
+
+```bash
+cd bk
+node setup-db.js
+```
+
+#### Database Schema
+
+The setup script creates the following tables:
+
+- `users` - User accounts with roles (admin, teacher, etc.)
+- `classes` - School classes (Class 6, Class 7, etc.)
+- `subjects` - Academic subjects per class (Math, Science, etc.)
+- `chapters` - Chapters within each subject
+- `questions` - Question bank with options, answers, and references
+
+The script also populates default data:
+- Default classes (Class 6 through Class 10)
+- Default subjects for each class
+- Initial chapter structure
+
+#### Manual Table Creation
+
+If you prefer to create tables manually, here are the essential SQL commands:
+
+```sql
+-- Create users table
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL
+);
+
+-- Create classes table
+CREATE TABLE IF NOT EXISTS classes (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(50) UNIQUE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create subjects table
+CREATE TABLE IF NOT EXISTS subjects (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(name, class_id)
+);
+
+-- Create chapters table
+CREATE TABLE IF NOT EXISTS chapters (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  subject_id INTEGER REFERENCES subjects(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(name, subject_id)
+);
+
+-- Create questions table
+CREATE TABLE IF NOT EXISTS questions (
+  id SERIAL PRIMARY KEY,
+  qserial VARCHAR(20),
+  classname VARCHAR(50),
+  subject VARCHAR(100),
+  chapter VARCHAR(100),
+  topic VARCHAR(100),
+  ques TEXT,
+  ques_img TEXT,
+  option_a TEXT,
+  option_a_img TEXT,
+  option_b TEXT,
+  option_b_img TEXT,
+  option_c TEXT,
+  option_c_img TEXT,
+  option_d TEXT,
+  option_d_img TEXT,
+  answer VARCHAR(10),
+  explanation TEXT,
+  explanation_img TEXT,
+  hint TEXT,
+  hint_img TEXT,
+  difficulty_level VARCHAR(20),
+  reference TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### Verify Database Setup
+
+To verify that your database tables were created successfully:
+
+```bash
+psql -d question_db -c "\dt"  # Lists all tables
+psql -d question_db -c "SELECT * FROM classes;"  # Should show default classes
+```
+
+### 3. Backend Setup
+
+1. Navigate to the backend directory:
+
+```bash
+cd bk
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Configure environment variables:
+
+```bash
+# Create .env file
+cp .env.example .env
+```
+
+4. Edit the `.env` file with your database credentials:
+
+```
+DATABASE_URL=postgres://username:password@localhost:5432/question_db
+JWT_SECRET=your_secret_key_here_make_it_long_and_random_to_ensure_security
+NODE_ENV=development
+```
+
+5. Start the backend server:
+
+```bash
 npm run dev
 ```
 
-This will:
-- Start the backend server on port 5000 with Nodemon for auto-reloading
-- Start the frontend development server on port 3000 with HMR enabled
+The server should now be running on http://localhost:3000
 
-### Starting Services Separately
+### 4. Frontend Setup
 
-If you need to run the frontend or backend independently:
+1. Navigate to the frontend directory:
 
 ```bash
-# Start only the frontend
-npm run frontend
-
-# Start only the backend
-npm run backend
+cd fr
 ```
 
-### Production Mode
+2. Install dependencies:
 
-For production deployment:
+```bash
+npm install
+```
 
-1. Build the frontend:
-   ```bash
-   cd fr
-   npm run build
-   ```
+3. Configure environment variables:
 
-2. Start the production server:
-   ```bash
-   # From the root directory
-   npm run start
-   ```
+```bash
+# Create .env file if it doesn't exist
+echo "VITE_API_URL=http://localhost:3000/api" > .env
+```
 
-## Application Features
+4. Start the development server:
 
-- **Question Management**: Create, read, update, and delete questions
-- **Bulk Import/Export**: Import and export questions in Excel format
-- **Categorization**: Organize questions by class, subject, chapter, and topic
-- **Search & Filter**: Advanced search and filtering capabilities
-- **Image Support**: Upload and manage images for questions and answers
+```bash
+npm run dev
+```
 
-## User Guide
+The frontend should now be accessible at http://localhost:5173
 
-### Importing Questions
+## API Documentation
 
-1. Navigate to the Upload page
-2. Download the complete template by clicking "Download Complete Template"
-3. Fill in the template with your questions
-4. Select the appropriate Class, Subject, and Chapter
-5. Upload your completed template
-6. Click "Analyze File" to preview the data
-7. Click "Import" to add the questions to the database
+The backend offers several API endpoints:
 
-### Managing Questions
+- `/api/auth` - Authentication routes (login, register)
+- `/api/questions` - Question management
+- `/api/curriculum` - Classes, subjects, and chapters management
+- `/api/users` - User management
 
-1. Use the Questions page to view all questions
-2. Filter by Class, Subject, Chapter, or Topic
-3. Use the search bar to find specific questions
-4. Edit or delete questions as needed
+## Initial Admin Account
+
+To create an admin account, run:
+
+```bash
+cd bk
+node create-admin.js
+```
+
+Follow the prompts to create your admin user.
+
+## Production Deployment
+
+### Backend
+
+1. Build and start the backend:
+
+```bash
+cd bk
+npm start
+```
+
+### Frontend
+
+1. Create a production build:
+
+```bash
+cd fr
+npm run build
+```
+
+2. The output will be in the `fr/dist` directory, which can be served by any static file server.
 
 ## Troubleshooting
 
-### Database Connection Issues
-- Ensure MongoDB is running: `mongod --version`
-- Check your database connection string in the `.env` file
-- Verify network connectivity to the database server
-
-### Frontend Issues
-- Clear your browser cache
-- Check the console for error messages
-- Ensure all dependencies are installed: `cd fr && npm install`
-
-### Backend Issues
-- Check the server logs for error messages
-- Ensure all dependencies are installed: `cd bk && npm install`
-- Verify the correct port is available: `lsof -i :5000`
-
-### Auto-Reloading Not Working
-- Frontend: Press `h` in the terminal running Vite to see HMR status
-- Backend: Press `rs` in the terminal running Nodemon to manually restart
-- Try closing and restarting the development servers
+- If the database connection fails, check your PostgreSQL service status and credentials
+- For CORS issues, verify the frontend URL is correctly configured in the backend
+- For file upload issues, ensure the 'uploads' directory is writable
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+[MIT License](LICENSE) 
