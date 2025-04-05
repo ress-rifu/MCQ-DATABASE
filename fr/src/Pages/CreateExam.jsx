@@ -850,12 +850,12 @@ const CreateExam = () => {
   // Render Review Settings Tab
   const renderReviewSettingsTab = () => (
     <div className="space-y-8">
-      <div className="bg-white rounded-lg border border-gray-100 p-6">
+      <div>
         <h3 className="text-lg font-medium text-gray-900 mb-5 flex items-center gap-2">
-          <FiEye className="text-indigo-500" />
+          <FiEye className="text-blue-500" />
           <span>Review Settings</span>
         </h3>
-        <div className="bg-gray-50 p-3 rounded-md border border-gray-100 mb-6">
+        <div className="bg-gray-50 p-3 rounded-md border border-gray-200 mb-6">
           <p className="text-sm text-gray-600">
             These settings control what happens after the test is completed and submitted by the test taker.
           </p>
@@ -874,12 +874,12 @@ const CreateExam = () => {
               value={formData.conclusion_text}
               onChange={handleInputChange}
               rows="3"
-              className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 sm:text-sm transition-colors"
+              className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
               placeholder="Enter conclusion text (optional)"
             />
           </div>
 
-          <div className="bg-gray-50 p-5 rounded-lg border border-gray-100">
+          <div className="bg-white p-5 rounded-lg border border-gray-200">
             <div className="flex items-center mb-4">
               <input
                 type="checkbox"
@@ -887,7 +887,7 @@ const CreateExam = () => {
                 name="show_custom_result_message"
                 checked={formData.show_custom_result_message}
                 onChange={handleInputChange}
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label htmlFor="show_custom_result_message" className="ml-2 block text-sm font-medium text-gray-700">
                 Show a custom message if the student passed or failed
@@ -895,7 +895,7 @@ const CreateExam = () => {
             </div>
 
             {formData.show_custom_result_message && (
-              <div className="ml-6 space-y-4 p-4 bg-white rounded-md border border-gray-100">
+              <div className="ml-6 space-y-4 p-4 bg-gray-50 rounded-md border border-gray-200">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Passing Score (%)
@@ -907,7 +907,7 @@ const CreateExam = () => {
                     onChange={handleInputChange}
                     min="1"
                     max="100"
-                    className="block w-24 px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 sm:text-sm transition-colors"
+                    className="block w-24 px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
                   />
                 </div>
 
@@ -920,7 +920,7 @@ const CreateExam = () => {
                     value={formData.pass_message}
                     onChange={handleInputChange}
                     rows="2"
-                    className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 sm:text-sm transition-colors"
+                    className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
                     placeholder="Congratulations! You have passed the test."
                   />
                 </div>
@@ -934,7 +934,7 @@ const CreateExam = () => {
                     value={formData.fail_message}
                     onChange={handleInputChange}
                     rows="2"
-                    className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 sm:text-sm transition-colors"
+                    className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
                     placeholder="Unfortunately, you did not pass the test. Please review the material and try again."
                   />
                 </div>
@@ -942,76 +942,76 @@ const CreateExam = () => {
             )}
           </div>
 
-          <div className="bg-gray-50 p-5 rounded-lg border border-gray-100">
+          <div className="bg-white p-5 rounded-lg border border-gray-200">
             <label className="block text-sm font-medium text-gray-700 mb-4">
               At the end of the test, display the user's:
             </label>
 
             <div className="space-y-3">
-              <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+              <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
                 <input
                   type="checkbox"
                   id="show_score"
                   name="show_score"
                   checked={formData.show_score}
                   onChange={handleInputChange}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label htmlFor="show_score" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                   Score
                 </label>
               </div>
 
-              <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+              <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
                 <input
                   type="checkbox"
                   id="show_test_outline"
                   name="show_test_outline"
                   checked={formData.show_test_outline}
                   onChange={handleInputChange}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label htmlFor="show_test_outline" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                   Test outline
                 </label>
               </div>
 
-              <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+              <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
                 <input
                   type="checkbox"
                   id="show_correct_incorrect"
                   name="show_correct_incorrect"
                   checked={formData.show_correct_incorrect}
                   onChange={handleInputChange}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label htmlFor="show_correct_incorrect" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                   Indicate if their response was correct or incorrect
                 </label>
               </div>
 
-              <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+              <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
                 <input
                   type="checkbox"
                   id="show_correct_answer"
                   name="show_correct_answer"
                   checked={formData.show_correct_answer}
                   onChange={handleInputChange}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label htmlFor="show_correct_answer" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                   Display the correct answer
                 </label>
               </div>
 
-              <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+              <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
                 <input
                   type="checkbox"
                   id="show_explanation"
                   name="show_explanation"
                   checked={formData.show_explanation}
                   onChange={handleInputChange}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label htmlFor="show_explanation" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                   Display the explanation
@@ -1035,20 +1035,20 @@ const CreateExam = () => {
 
     return (
       <div className="space-y-8">
-        <div className="bg-white rounded-lg border border-gray-100 p-6">
+        <div>
           <h3 className="text-lg font-medium text-gray-900 mb-5 flex items-center gap-2">
-            <FiUsers className="text-indigo-500" />
+            <FiUsers className="text-blue-500" />
             <span>Access Control</span>
           </h3>
 
           <div className="space-y-8">
-            <div className="bg-gray-50 p-5 rounded-lg border border-gray-100">
+            <div className="bg-white p-5 rounded-lg border border-gray-200">
               <label className="block text-sm font-medium text-gray-700 mb-4">
                 Who can take your test?
               </label>
 
               <div className="space-y-3">
-                <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+                <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
                   <input
                     type="radio"
                     id="access_anyone"
@@ -1056,14 +1056,14 @@ const CreateExam = () => {
                     value="anyone"
                     checked={formData.access_type === 'anyone'}
                     onChange={handleInputChange}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                   />
                   <label htmlFor="access_anyone" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                     Anyone
                   </label>
                 </div>
 
-                <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+                <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
                   <input
                     type="radio"
                     id="access_passcode"
@@ -1071,7 +1071,7 @@ const CreateExam = () => {
                     value="passcode"
                     checked={formData.access_type === 'passcode'}
                     onChange={handleInputChange}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                   />
                   <label htmlFor="access_passcode" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                     Anyone who enters a passcode of my choosing
@@ -1079,7 +1079,7 @@ const CreateExam = () => {
                 </div>
 
                 {formData.access_type === 'passcode' && (
-                  <div className="ml-6 mt-3 p-4 bg-white rounded-md border border-gray-100">
+                  <div className="ml-6 mt-3 p-4 bg-gray-50 rounded-md border border-gray-200">
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       Passcode
                     </label>
@@ -1088,13 +1088,13 @@ const CreateExam = () => {
                       name="access_passcode"
                       value={formData.access_passcode}
                       onChange={handleInputChange}
-                      className="block w-full sm:w-1/3 px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 sm:text-sm transition-colors"
+                      className="block w-full sm:w-1/3 px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
                       placeholder="Enter passcode"
                     />
                   </div>
                 )}
 
-                <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+                <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
                   <input
                     type="radio"
                     id="access_identifier"
@@ -1102,7 +1102,7 @@ const CreateExam = () => {
                     value="identifier_list"
                     checked={formData.access_type === 'identifier_list'}
                     onChange={handleInputChange}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                   />
                   <label htmlFor="access_identifier" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                     Anyone who enters a unique identifier from a list that I specify
@@ -1110,7 +1110,7 @@ const CreateExam = () => {
                 </div>
 
                 {formData.access_type === 'identifier_list' && (
-                  <div className="ml-6 mt-3 p-4 bg-white rounded-md border border-gray-100">
+                  <div className="ml-6 mt-3 p-4 bg-gray-50 rounded-md border border-gray-200">
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       List of allowed identifiers (one per line)
                     </label>
@@ -1118,13 +1118,13 @@ const CreateExam = () => {
                       value={formData.identifier_list.join('\n')}
                       onChange={(e) => handleArrayInput(e, 'identifier_list')}
                       rows="4"
-                      className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 sm:text-sm transition-colors"
+                      className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
                       placeholder="Enter identifiers (e.g., student IDs) one per line"
                     />
                   </div>
                 )}
 
-                <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+                <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
                   <input
                     type="radio"
                     id="access_email"
@@ -1132,7 +1132,7 @@ const CreateExam = () => {
                     value="email_list"
                     checked={formData.access_type === 'email_list'}
                     onChange={handleInputChange}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                   />
                   <label htmlFor="access_email" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                     Anyone who enters an email address from a list that I specify
@@ -1140,7 +1140,7 @@ const CreateExam = () => {
                 </div>
 
                 {formData.access_type === 'email_list' && (
-                  <div className="ml-6 mt-3 p-4 bg-white rounded-md border border-gray-100">
+                  <div className="ml-6 mt-3 p-4 bg-gray-50 rounded-md border border-gray-200">
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       List of allowed email addresses (one per line)
                     </label>
@@ -1148,7 +1148,7 @@ const CreateExam = () => {
                       value={formData.email_list.join('\n')}
                       onChange={(e) => handleArrayInput(e, 'email_list')}
                       rows="4"
-                      className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 sm:text-sm transition-colors"
+                      className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
                       placeholder="Enter email addresses one per line"
                     />
                   </div>
@@ -1156,16 +1156,16 @@ const CreateExam = () => {
               </div>
             </div>
 
-            <div className="bg-gray-50 p-5 rounded-lg border border-gray-100">
+            <div className="bg-white p-5 rounded-lg border border-gray-200">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 How much time do test takers have to complete the test?
               </label>
-              <p className="text-sm text-gray-500 mb-4 bg-white p-3 rounded-md border border-gray-100">
+              <p className="text-sm text-gray-500 mb-4 bg-gray-50 p-3 rounded-md border border-gray-200">
                 The timer starts the moment they enter the test and continues even if they close out of the test.
               </p>
 
               <div className="space-y-3">
-                <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+                <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
                   <input
                     type="radio"
                     id="time_unlimited"
@@ -1173,14 +1173,14 @@ const CreateExam = () => {
                     value="unlimited"
                     checked={formData.time_limit_type === 'unlimited'}
                     onChange={handleInputChange}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                   />
                   <label htmlFor="time_unlimited" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                     Unlimited time
                   </label>
                 </div>
 
-                <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+                <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
                   <input
                     type="radio"
                     id="time_specified"
@@ -1188,7 +1188,7 @@ const CreateExam = () => {
                     value="specified"
                     checked={formData.time_limit_type === 'specified'}
                     onChange={handleInputChange}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                   />
                   <label htmlFor="time_specified" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                     Specific time limit
@@ -1202,7 +1202,7 @@ const CreateExam = () => {
                         value={formData.duration_minutes}
                         onChange={handleInputChange}
                         min="1"
-                        className="block w-24 px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 sm:text-sm transition-colors"
+                        className="block w-24 px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
                       />
                       <span className="ml-2 text-sm text-gray-700">minutes</span>
                     </div>
@@ -1211,13 +1211,13 @@ const CreateExam = () => {
               </div>
             </div>
 
-            <div className="bg-gray-50 p-5 rounded-lg border border-gray-100">
+            <div className="bg-white p-5 rounded-lg border border-gray-200">
               <label className="block text-sm font-medium text-gray-700 mb-4">
                 How many times can someone take your test?
               </label>
 
               <div className="space-y-3">
-                <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+                <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
                   <input
                     type="radio"
                     id="attempts_unlimited"
@@ -1225,14 +1225,14 @@ const CreateExam = () => {
                     value="unlimited"
                     checked={formData.attempt_limit_type === 'unlimited'}
                     onChange={handleInputChange}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                   />
                   <label htmlFor="attempts_unlimited" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                     Unlimited attempts
                   </label>
                 </div>
 
-                <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+                <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
                   <input
                     type="radio"
                     id="attempts_limited"
@@ -1240,7 +1240,7 @@ const CreateExam = () => {
                     value="limited"
                     checked={formData.attempt_limit_type === 'limited'}
                     onChange={handleInputChange}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                   />
                   <label htmlFor="attempts_limited" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                     Limited attempts
@@ -1254,7 +1254,7 @@ const CreateExam = () => {
                         value={formData.max_attempts}
                         onChange={handleInputChange}
                         min="1"
-                        className="block w-24 px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 sm:text-sm transition-colors"
+                        className="block w-24 px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
                       />
                       <span className="ml-2 text-sm text-gray-700">attempts</span>
                     </div>
@@ -1263,7 +1263,7 @@ const CreateExam = () => {
               </div>
             </div>
 
-            <div className="bg-gray-50 p-5 rounded-lg border border-gray-100">
+            <div className="bg-white p-5 rounded-lg border border-gray-200">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 What should test takers enter to identify themselves?
               </label>
@@ -1275,7 +1275,7 @@ const CreateExam = () => {
                 name="identifier_prompt"
                 value={formData.identifier_prompt}
                 onChange={handleInputChange}
-                className="block w-full sm:w-1/2 px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 sm:text-sm transition-colors"
+                className="block w-full sm:w-1/2 px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
                 placeholder="Enter your name"
               />
             </div>
@@ -1288,98 +1288,98 @@ const CreateExam = () => {
   // Render Browser Settings Tab
   const renderBrowserSettingsTab = () => (
     <div className="space-y-8">
-      <div className="bg-white rounded-lg border border-gray-100 p-6">
+      <div>
         <h3 className="text-lg font-medium text-gray-900 mb-5 flex items-center gap-2">
-          <FiShield className="text-indigo-500" />
+          <FiShield className="text-blue-500" />
           <span>Browser Functionality</span>
         </h3>
-        <div className="bg-gray-50 p-3 rounded-md border border-gray-100 mb-6">
+        <div className="bg-gray-50 p-3 rounded-md border border-gray-200 mb-6">
           <p className="text-sm text-gray-600">
             These settings control browser functionality during the exam to help maintain exam integrity.
           </p>
         </div>
 
-        <div className="bg-gray-50 p-5 rounded-lg border border-gray-100">
+        <div className="bg-white p-5 rounded-lg border border-gray-200">
           <h4 className="text-sm font-medium text-gray-700 mb-4">Security Options</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+            <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
               <input
                 type="checkbox"
                 id="disable_right_click"
                 name="disable_right_click"
                 checked={formData.disable_right_click}
                 onChange={handleInputChange}
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label htmlFor="disable_right_click" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                 Disable right-click context menu
               </label>
             </div>
 
-            <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+            <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
               <input
                 type="checkbox"
                 id="disable_copy_paste"
                 name="disable_copy_paste"
                 checked={formData.disable_copy_paste}
                 onChange={handleInputChange}
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label htmlFor="disable_copy_paste" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                 Disable copy/paste
               </label>
             </div>
 
-            <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+            <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
               <input
                 type="checkbox"
                 id="disable_translate"
                 name="disable_translate"
                 checked={formData.disable_translate}
                 onChange={handleInputChange}
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label htmlFor="disable_translate" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                 Disable translate
               </label>
             </div>
 
-            <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+            <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
               <input
                 type="checkbox"
                 id="disable_autocomplete"
                 name="disable_autocomplete"
                 checked={formData.disable_autocomplete}
                 onChange={handleInputChange}
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label htmlFor="disable_autocomplete" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                 Disable autocomplete
               </label>
             </div>
 
-            <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+            <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
               <input
                 type="checkbox"
                 id="disable_spellcheck"
                 name="disable_spellcheck"
                 checked={formData.disable_spellcheck}
                 onChange={handleInputChange}
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label htmlFor="disable_spellcheck" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                 Disable spellcheck
               </label>
             </div>
 
-            <div className="flex items-center p-2 hover:bg-white rounded-md transition-colors">
+            <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
               <input
                 type="checkbox"
                 id="disable_printing"
                 name="disable_printing"
                 checked={formData.disable_printing}
                 onChange={handleInputChange}
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label htmlFor="disable_printing" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                 Disable printing
@@ -1412,24 +1412,24 @@ const CreateExam = () => {
   // Render Questions Tab
   const renderQuestionsTab = () => (
     <div className="space-y-8">
-      <div className="bg-white rounded-lg border border-gray-100 p-6">
+      <div>
         <h3 className="text-lg font-medium text-gray-900 mb-5 flex items-center gap-2">
-          <FiCheckCircle className="text-indigo-500" />
+          <FiCheckCircle className="text-blue-500" />
           <span>Selected Questions ({selectedQuestions.length})</span>
         </h3>
 
         {selectedQuestions.length > 0 ? (
           <div className="mb-6">
-            <div className="mb-5 p-4 bg-indigo-50 rounded-lg border border-indigo-100">
-              <h4 className="text-sm font-medium text-indigo-700 mb-2">Quick Stats</h4>
+            <div className="mb-5 p-4 bg-blue-50 rounded-lg border border-blue-100">
+              <h4 className="text-sm font-medium text-blue-700 mb-2">Quick Stats</h4>
               <div className="flex flex-wrap gap-6">
                 <div className="flex items-center">
                   <span className="text-sm text-gray-600">Total Questions:</span>
-                  <span className="ml-2 text-sm font-medium text-indigo-700">{selectedQuestions.length}</span>
+                  <span className="ml-2 text-sm font-medium text-blue-700">{selectedQuestions.length}</span>
                 </div>
                 <div className="flex items-center">
                   <span className="text-sm text-gray-600">Total Marks:</span>
-                  <span className="ml-2 text-sm font-medium text-indigo-700">{formData.total_marks}</span>
+                  <span className="ml-2 text-sm font-medium text-blue-700">{formData.total_marks}</span>
                 </div>
               </div>
             </div>
@@ -1438,7 +1438,7 @@ const CreateExam = () => {
               {selectedQuestions.map((question, index) => (
                 <div
                   key={question.id}
-                  className="p-4 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-indigo-200 transition-colors"
+                  className="p-4 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-blue-200 transition-colors"
                 >
                   <div className="flex justify-between mb-3">
                     <div className="flex items-center">
@@ -1452,7 +1452,7 @@ const CreateExam = () => {
                           min="1"
                           value={question.marks}
                           onChange={(e) => updateQuestionMarks(question.id, e.target.value)}
-                          className="w-16 px-2 py-1 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500"
+                          className="w-16 px-2 py-1 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
                         />
                       </div>
                     </div>
@@ -1464,7 +1464,7 @@ const CreateExam = () => {
                         className={`p-1.5 rounded-md ${
                           index === 0
                             ? 'text-gray-300 cursor-not-allowed'
-                            : 'text-gray-500 hover:bg-gray-100 hover:text-indigo-600'
+                            : 'text-gray-500 hover:bg-gray-100 hover:text-blue-600'
                         }`}
                         title="Move up"
                       >
@@ -1476,7 +1476,7 @@ const CreateExam = () => {
                         className={`p-1.5 rounded-md ${
                           index === selectedQuestions.length - 1
                             ? 'text-gray-300 cursor-not-allowed'
-                            : 'text-gray-500 hover:bg-gray-100 hover:text-indigo-600'
+                            : 'text-gray-500 hover:bg-gray-100 hover:text-blue-600'
                         }`}
                         title="Move down"
                       >
@@ -1536,9 +1536,9 @@ const CreateExam = () => {
         )}
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-100 p-6">
+      <div>
         <h3 className="text-lg font-medium text-gray-900 mb-5 flex items-center gap-2">
-          <FiList className="text-indigo-500" />
+          <FiList className="text-blue-500" />
           <span>Question Bank</span>
         </h3>
 
@@ -1555,7 +1555,7 @@ const CreateExam = () => {
                 type="text"
                 value={questionSearch}
                 onChange={(e) => setQuestionSearch(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 sm:text-sm transition-colors"
+                className="w-full pl-10 pr-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
                 placeholder="Search by question or options..."
               />
             </div>
@@ -1568,7 +1568,7 @@ const CreateExam = () => {
             <select
               value={selectedClass}
               onChange={handleClassChange}
-              className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 sm:text-sm transition-colors appearance-none"
+              className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors appearance-none"
             >
               <option value="">All Classes</option>
               {classes.map(cls => (
@@ -1584,7 +1584,7 @@ const CreateExam = () => {
             <select
               value={selectedSubject}
               onChange={handleSubjectChange}
-              className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 sm:text-sm transition-colors appearance-none"
+              className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors appearance-none"
               disabled={!selectedClass}
             >
               <option value="">All Subjects</option>
@@ -1609,7 +1609,7 @@ const CreateExam = () => {
                     </div>
                     <button
                       onClick={() => addQuestion(question)}
-                      className="ml-4 flex-shrink-0 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md flex items-center gap-1 transition-colors"
+                      className="ml-4 flex-shrink-0 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md flex items-center gap-1 transition-colors"
                     >
                       <FiPlus className="h-3 w-3" />
                       <span>Add</span>
