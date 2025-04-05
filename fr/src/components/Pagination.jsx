@@ -80,20 +80,22 @@ const Pagination = ({
             `Showing ${Math.min(totalItems, (currentPage - 1) * pageSize + 1)}-${Math.min(totalItems, currentPage * pageSize)} of ${totalItems} items`
           )}
         </span>
-        <div className="flex items-center ml-4">
-          <span className="mr-2">Items per page:</span>
-          <select
-            value={pageSize}
-            onChange={(e) => onPageSizeChange(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-            className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            {pageSizeOptions.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {onPageSizeChange && (
+          <div className="flex items-center ml-4">
+            <span className="mr-2">Items per page:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => onPageSizeChange(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              {pageSizeOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
       
       {totalPages > 1 && (

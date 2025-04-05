@@ -22,7 +22,7 @@ router.post('/signup', [
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-    const { email, password, name } = req.body;
+    const { email, password, name, role = 'student' } = req.body;
 
     try {
         // Check if the user already exists
@@ -31,13 +31,19 @@ router.post('/signup', [
             return res.status(400).json({ message: 'User already exists' });
         }
 
+        // Validate role (only allow 'student' or 'user' for new registrations unless specified by admin)
+        const validRoles = ['student', 'user'];
+        const defaultRole = 'student'; // Default role for new users
+        
+        let userRole = role && validRoles.includes(role) ? role : defaultRole;
+
         // Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Insert the new user into the database with the hashed password
         const newUser = await pool.query(
             'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING *',
-            [name, email, hashedPassword, 'user']
+            [name, email, hashedPassword, userRole]
         );
 
         // Create JWT token

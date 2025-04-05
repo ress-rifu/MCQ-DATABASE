@@ -13,17 +13,16 @@ const USE_STRICT_MODE = false;
  * and renders the router with error handling capabilities
  */
 const App = () => {
-  const content = (
+  return (
     <NotificationProvider>
-      <RouterProvider router={router} />
+      {USE_STRICT_MODE ? (
+        <React.StrictMode>
+          <RouterProvider router={router} />
+        </React.StrictMode>
+      ) : (
+        <RouterProvider router={router} />
+      )}
     </NotificationProvider>
-  );
-
-  // Use strict mode only in development for debugging
-  return USE_STRICT_MODE ? (
-    <React.StrictMode>{content}</React.StrictMode>
-  ) : (
-    content
   );
 };
 

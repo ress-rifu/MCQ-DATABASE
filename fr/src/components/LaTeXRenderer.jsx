@@ -14,6 +14,13 @@ const LaTeXRenderer = ({ content, className = '' }) => {
   const containerRef = useRef(null);
   const [hasLongtable, setHasLongtable] = useState(false);
 
+  // Check if content contains Bengali text
+  const hasBengaliText = (text) => {
+    // Unicode range for Bengali: \u0980-\u09FF
+    const bengaliPattern = /[\u0980-\u09FF]/;
+    return bengaliPattern.test(text);
+  };
+
   // Helper function to clean longtable content for better rendering
   const cleanLongtableContent = (tableContent) => {
     // Remove the dollar signs if present
@@ -61,6 +68,14 @@ const LaTeXRenderer = ({ content, className = '' }) => {
         if (!safeContent.trim()) {
           containerRef.current.innerHTML = '';
           return;
+        }
+
+        // Check if content has Bengali text
+        const isBengali = hasBengaliText(safeContent);
+        if (isBengali) {
+          containerRef.current.classList.add('bangla');
+        } else {
+          containerRef.current.classList.remove('bangla');
         }
 
         // Check if this is a complex table that requires special handling
@@ -177,6 +192,16 @@ const LaTeXRenderer = ({ content, className = '' }) => {
         // Add specific class for better scrolling on tables
         if (containsLongtable || containsTabular) {
           containerRef.current.classList.add('has-latex-table');
+        }
+
+        // After processing the content, ensure the correct font is applied
+        if (isBengali) {
+          const nonKaTeXElements = containerRef.current.querySelectorAll(':not(.katex)');
+          nonKaTeXElements.forEach(el => {
+            if (hasBengaliText(el.textContent)) {
+              el.classList.add('bangla');
+            }
+          });
         }
       } catch (error) {
         console.error('Error rendering LaTeX content:', error);

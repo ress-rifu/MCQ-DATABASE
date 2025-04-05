@@ -18,12 +18,22 @@ const MyQuestion = () => {
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
+    
+    // User role state
+    const [user, setUser] = useState(null);
+    const isStudent = user?.role === 'student';
 
     useEffect(() => {
         // Retrieve the selected questions from localStorage
         const storedQuestions = localStorage.getItem('selectedQuestions');
         if (storedQuestions) {
             setSelectedQuestions(JSON.parse(storedQuestions));
+        }
+        
+        // Get user info from localStorage
+        const userInfo = localStorage.getItem('user');
+        if (userInfo) {
+            setUser(JSON.parse(userInfo));
         }
     }, []);
 
@@ -47,14 +57,14 @@ const MyQuestion = () => {
         });
         setSelectedQuestions(updatedQuestions);
         localStorage.setItem('selectedQuestions', JSON.stringify(updatedQuestions));
-        showNotification('Question removed from collection');
+        showNotification(`Question removed from ${isStudent ? 'bookmarks' : 'collection'}`);
     };
 
     const clearAllQuestions = () => {
-        if (window.confirm('Are you sure you want to clear all selected questions?')) {
+        if (window.confirm(`Are you sure you want to clear all ${isStudent ? 'bookmarked' : 'selected'} questions?`)) {
             setSelectedQuestions([]);
             localStorage.removeItem('selectedQuestions');
-            showNotification('All questions cleared from collection');
+            showNotification(`All questions cleared from ${isStudent ? 'bookmarks' : 'collection'}`);
         }
     };
 
@@ -101,7 +111,7 @@ const MyQuestion = () => {
             setSelectedQuestions(updatedQuestions);
             localStorage.setItem('selectedQuestions', JSON.stringify(updatedQuestions));
             setBatchSelectedIds([]);
-            showNotification(`${batchSelectedIds.length} questions removed from collection`);
+            showNotification(`${batchSelectedIds.length} questions removed from ${isStudent ? 'bookmarks' : 'collection'}`);
         }
     };
 
@@ -220,9 +230,11 @@ const MyQuestion = () => {
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                 <div>
-                                    <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">My Questions</h1>
+                                    <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                                        {isStudent ? 'My Bookmarks' : 'My Questions'}
+                                    </h1>
                                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                        Your collection of selected questions
+                                        Your {isStudent ? 'bookmarked' : 'collection of selected'} questions
                                     </p>
                                 </div>
                                 
@@ -248,7 +260,9 @@ const MyQuestion = () => {
                             <svg className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                             </svg>
-                            <p className="text-gray-600 dark:text-gray-400 mb-5">No questions in your collection yet. Please select questions from the Question Bank.</p>
+                            <p className="text-gray-600 dark:text-gray-400 mb-5">
+                                No questions in your {isStudent ? 'bookmarks' : 'collection'} yet. Please {isStudent ? 'bookmark' : 'select'} questions from the Question Bank.
+                            </p>
                             <button 
                                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200 shadow-sm"
                                 onClick={handleBackToQuestionBank}
@@ -270,9 +284,11 @@ const MyQuestion = () => {
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
-                                <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">My Questions</h1>
+                                <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                                    {isStudent ? 'My Bookmarks' : 'My Questions'}
+                                </h1>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                    {selectedQuestions.length} Questions in your collection
+                                    {selectedQuestions.length} Questions in your {isStudent ? 'bookmarks' : 'collection'}
                                     {isBatchSelectionMode && batchSelectedIds.length > 0 && (
                                         <span className="ml-2 text-indigo-500 font-medium">
                                             ({batchSelectedIds.length} selected)
@@ -284,15 +300,19 @@ const MyQuestion = () => {
                             <div className="flex items-center gap-3 self-end sm:self-auto">
                                 {!isBatchSelectionMode ? (
                                     <>
-                                        <button 
-                                            onClick={toggleBatchSelectionMode}
-                                            className="px-3 py-1.5 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-all flex items-center gap-1"
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                            </svg>
-                                            Select Questions
-                                        </button>
+                                        {/* Only show selection mode button for non-students */}
+                                        {!isStudent && (
+                                            <button 
+                                                onClick={toggleBatchSelectionMode}
+                                                className="px-3 py-1.5 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-all flex items-center gap-1"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                                </svg>
+                                                Select Questions
+                                            </button>
+                                        )}
+                                        
                                         <button 
                                             onClick={clearAllQuestions}
                                             className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-700 transition-all flex items-center gap-1"
@@ -302,15 +322,19 @@ const MyQuestion = () => {
                                             </svg>
                                             Clear All
                                         </button>
-                                        <button 
-                                            onClick={exportToExcel}
-                                            className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all flex items-center gap-1"
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                            </svg>
-                                            Export to Excel
-                                        </button>
+                                        
+                                        {/* Only show export button for non-students */}
+                                        {!isStudent && (
+                                            <button 
+                                                onClick={exportToExcel}
+                                                className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all flex items-center gap-1"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                </svg>
+                                                Export to Excel
+                                            </button>
+                                        )}
                                     </>
                                 ) : (
                                     <>

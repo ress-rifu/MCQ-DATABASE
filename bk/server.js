@@ -36,6 +36,7 @@ const activityRoutes = require('./routes/activity');
 const docxUploadRoutes = require('./routes/docxUpload');
 const apiRoutes = require('./routes/api');
 const coursesRoutes = require('./routes/courses');
+const examsRoutes = require('./routes/exams');
 
 const app = express();
 
@@ -429,6 +430,7 @@ app.use('/api/curriculum', authMiddleware, curriculumRoutes);
 app.use('/api/activity', authMiddleware, activityRoutes);
 app.use('/api/docx', authMiddleware, docxUploadRoutes);
 app.use('/api/courses', coursesRoutes);
+app.use('/api/exams', examsRoutes);
 
 // Add a global error handler
 app.use((err, req, res, next) => {

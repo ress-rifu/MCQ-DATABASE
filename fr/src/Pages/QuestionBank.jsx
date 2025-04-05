@@ -60,6 +60,10 @@ const QuestionBank = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
 
+    // User role state
+    const [user, setUser] = useState(null);
+    const isStudent = user?.role === 'student';
+
     // Show notification function
     const showNotification = (message, type = 'success') => {
         setNotification({ show: true, message, type });
@@ -75,6 +79,11 @@ const QuestionBank = () => {
         const storedQuestions = localStorage.getItem('selectedQuestions');
         if (storedQuestions) {
             setSelectedQuestions(JSON.parse(storedQuestions));
+        }
+        // Load user data
+        const userData = localStorage.getItem('user');
+        if (userData) {
+            setUser(JSON.parse(userData));
         }
     }, []);
 
@@ -404,9 +413,9 @@ const QuestionBank = () => {
             setSelectedQuestions(updatedSelection);
             // Store in localStorage
             localStorage.setItem('selectedQuestions', JSON.stringify(updatedSelection));
-            showNotification('Question added to your collection');
+            showNotification('Question added to your bookmarks');
         } else {
-            showNotification('This question is already in your collection', 'warning');
+            showNotification('This question is already in your bookmarks', 'warning');
         }
     };
 
@@ -420,7 +429,7 @@ const QuestionBank = () => {
         
         setSelectedQuestions(updatedSelection);
         localStorage.setItem('selectedQuestions', JSON.stringify(updatedSelection));
-        showNotification('Question removed from your collection');
+        showNotification('Question removed from your bookmarks');
     };
 
     // Check if a question is in the collection
@@ -433,6 +442,12 @@ const QuestionBank = () => {
 
     // Batch selection handlers
     const toggleBatchSelectionMode = () => {
+        // Don't allow students to enter batch selection mode
+        if (isStudent) {
+            showNotification('This feature is not available for students', 'warning');
+            return;
+        }
+        
         setIsBatchSelectionMode(!isBatchSelectionMode);
         if (isBatchSelectionMode) {
             // Clear selections when exiting batch mode
@@ -461,6 +476,12 @@ const QuestionBank = () => {
 
     // Batch add to collection
     const addBatchToCollection = () => {
+        // Don't allow students to batch add to collection
+        if (isStudent) {
+            showNotification('This feature is not available for students', 'warning');
+            return;
+        }
+        
         if (batchSelectedIds.length === 0) {
             showNotification('Please select questions first', 'warning');
             return;
@@ -905,7 +926,7 @@ const QuestionBank = () => {
                         ? 'border-indigo-500 dark:border-indigo-500' 
                         : 'border-gray-200 dark:border-gray-700'
                 } hover:border-gray-300 dark:hover:border-gray-600 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full`}
-                onClick={() => isBatchSelectionMode && onSelect(questionId)}
+                onClick={() => isBatchSelectionMode && !isStudent && onSelect(questionId)}
             >
                 {/* Header with Question ID chip */}
                 <div className="p-4 border-b border-gray-100 dark:border-gray-700">
@@ -1109,58 +1130,95 @@ const QuestionBank = () => {
                 {!isBatchSelectionMode && (
                     <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between mt-auto">
                         <div className="flex items-center gap-3">
+                            {/* Action buttons - Only render for non-student users */}
+                            {!isStudent && (
+                                <>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onEdit(question);
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/10 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium transition-colors"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onDelete(question.id || question._id);
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium transition-colors"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Delete
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onAddToCollection(question);
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-md bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/10 dark:hover:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-sm font-medium transition-colors"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                        </svg>
+                                        Add to Collection
+                                    </button>
+                                </>
+                            )}
+                            
+                            {/* Bookmark button - Always shown for all users */}
+                            {isStudent && (
+                                <>
+                                    {questionInCollection ? (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleRemoveQuestion(question);
+                                            }}
+                                            className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium transition-colors"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                                            </svg>
+                                            Remove Bookmark
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleSelectQuestion(question);
+                                            }}
+                                            className="flex items-center gap-2 px-4 py-2 rounded-md bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/10 dark:hover:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-sm font-medium transition-colors"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                                            </svg>
+                                            Bookmark
+                                        </button>
+                                    )}
+                                </>
+                            )}
+                            
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onEdit(question);
+                                    onSelect(questionId);
                                 }}
-                                className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/10 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium transition-colors"
+                                className="p-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 rounded focus:outline-none"
+                                title="View Details"
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                 </svg>
-                                Edit
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDelete(question.id || question._id);
-                                }}
-                                className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium transition-colors"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Delete
                             </button>
                         </div>
-                        {questionInCollection ? (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRemoveQuestion(question);
-                                }}
-                                className="bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors flex items-center gap-2"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Remove from Collection
-                            </button>
-                        ) : (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onAddToCollection(question);
-                                }}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors flex items-center gap-2"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                                Add to Collection
-                            </button>
-                        )}
                     </div>
                 )}
             </div>
@@ -1217,51 +1275,62 @@ const QuestionBank = () => {
                             </div>
                             
                             <div className="flex items-center gap-3 self-end sm:self-auto">
-                                <button 
-                                    onClick={() => handleEditClick({ 
-                                        // Create a blank question template for adding new questions
-                                        subject: '',
-                                        classname: '',
-                                        chapter: '',
-                                        topic: '',
-                                        qserial: '',
-                                        difficulty_level: '',
-                                        question_text: '',
-                                        option_a: '',
-                                        option_b: '',
-                                        option_c: '',
-                                        option_d: '',
-                                        correct_answer: '',
-                                        explanation: '',
-                                        hint: '',
-                                        reference: ''
-                                    })}
-                                    className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all flex items-center gap-1"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                    </svg>
-                                    Add Question
-                                </button>
-                                <button 
-                                    onClick={toggleBatchSelectionMode}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                                        isBatchSelectionMode 
-                                            ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' 
-                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                                    }`}
-                                >
-                                    {isBatchSelectionMode ? 'Exit Selection' : 'Select Multiple'}
-                                </button>
+                                {/* Add New Question button - Only render for non-student users */}
+                                {!isStudent && (
+                                    <button 
+                                        onClick={() => handleEditClick({ 
+                                            // Create a blank question template for adding new questions
+                                            subject: '',
+                                            classname: '',
+                                            chapter: '',
+                                            topic: '',
+                                            qserial: '',
+                                            difficulty_level: '',
+                                            question_text: '',
+                                            option_a: '',
+                                            option_b: '',
+                                            option_c: '',
+                                            option_d: '',
+                                            correct_answer: '',
+                                            explanation: '',
+                                            hint: '',
+                                            reference: ''
+                                        })}
+                                        className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all flex items-center gap-1"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        Add Question
+                                    </button>
+                                )}
                                 
+                                {/* Batch mode button - Only for non-student users */}
+                                {!isStudent && (
+                                    <button 
+                                        onClick={toggleBatchSelectionMode}
+                                        className={`px-3 py-1.5 text-white rounded-lg text-sm font-medium transition-all flex items-center gap-1 ${
+                                            isBatchSelectionMode 
+                                                ? 'bg-amber-500 hover:bg-amber-600' 
+                                                : 'bg-indigo-600 hover:bg-indigo-700'
+                                        }`}
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                        </svg>
+                                        {isBatchSelectionMode ? 'Exit Batch Mode' : 'Batch Mode'}
+                                    </button>
+                                )}
+                                
+                                {/* My Collection button - Always available for all users */}
                                 <button 
-                                    onClick={viewSelectedQuestions}
-                                    className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-all flex items-center gap-1"
+                                    onClick={() => navigate('/myquestion')}
+                                    className="px-3 py-1.5 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-all flex items-center gap-1"
                                 >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                                     </svg>
-                                    Collection ({selectedQuestions.length})
+                                    {isStudent ? 'My Bookmarks' : 'Collection'} ({selectedQuestions.length})
                                 </button>
                             </div>
                         </div>

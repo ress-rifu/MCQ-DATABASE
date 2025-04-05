@@ -78,7 +78,7 @@ export const NotificationProvider = ({ children }) => {
       
       {/* Notification Toast UI */}
       {notification.show && (
-        <div className="fixed bottom-4 right-4 z-[9999] animate-fade-in-up">
+        <div className="fixed bottom-4 right-4 z-[9999]">
           <div className={`px-6 py-3 rounded-md shadow-xl flex items-center ${
             notification.type === NOTIFICATION_TYPES.ERROR 
               ? 'bg-red-600 text-white' 

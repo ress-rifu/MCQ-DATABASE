@@ -35,8 +35,9 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    if (role !== "teacher" && role !== "admin") {
-      return res.status(400).json({ message: "Invalid role" });
+    // Allow teacher, admin, and student roles
+    if (role !== "teacher" && role !== "admin" && role !== "student") {
+      return res.status(400).json({ message: "Invalid role. Must be 'admin', 'teacher', or 'student'" });
     }
 
     // Check if user with same email exists
@@ -111,8 +112,9 @@ router.put("/:id", async (req, res) => {
 
     // Add role to update if provided
     if (role) {
-      if (role !== "teacher" && role !== "admin") {
-        return res.status(400).json({ message: "Invalid role" });
+      // Allow teacher, admin, and student roles
+      if (role !== "teacher" && role !== "admin" && role !== "student") {
+        return res.status(400).json({ message: "Invalid role. Must be 'admin', 'teacher', or 'student'" });
       }
       updateQuery += `role = $${valueCounter}, `;
       values.push(role);

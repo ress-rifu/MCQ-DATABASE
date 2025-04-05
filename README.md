@@ -85,6 +85,63 @@ This interactive script will:
    npm run check-db
    ```
 
+## Troubleshooting Database Connection Issues
+
+If you encounter database connection errors, here are some common issues and solutions:
+
+### Password Authentication Failed
+
+If you see an error like:
+```
+error: password authentication failed for user "postgres"
+```
+
+This means the password in your connection string doesn't match the actual PostgreSQL password.
+
+Solutions:
+1. Update the `.env` files with the correct password:
+   ```
+   DATABASE_URL=postgres://postgres:correctPassword@localhost:5432/question_db
+   ```
+   
+2. Run the database initialization script again:
+   ```bash
+   npm run init-db
+   ```
+   
+3. If you're not sure about your PostgreSQL password, you can reset it:
+   - For Windows:
+     ```
+     psql -U postgres -c "ALTER USER postgres WITH PASSWORD 'newpassword';"
+     ```
+   - For Linux/Mac:
+     ```
+     sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'newpassword';"
+     ```
+
+### Database Doesn't Exist
+
+If you see an error about the database not existing:
+
+Solutions:
+1. Create the database manually:
+   ```
+   psql -U postgres -c "CREATE DATABASE question_db;"
+   ```
+   
+2. Run the database initialization script with the correct database name:
+   ```bash
+   npm run init-db
+   ```
+
+### PostgreSQL Service Not Running
+
+Solutions:
+1. Start the PostgreSQL service:
+   - Windows: Open Services app and start PostgreSQL service
+   - Linux: `sudo service postgresql start`
+   - Mac: `brew services start postgresql`
+
 ## Quick Start
 
 ### Install Dependencies
@@ -390,4 +447,36 @@ npm run build
 
 ## License
 
-[MIT License](LICENSE) 
+[MIT License](LICENSE)
+
+## Recent Updates
+
+### Exam Structure Changes
+We've updated the exam structure to better organize content:
+
+1. **Courses as Container**: Exams are now organized under courses rather than directly referencing classes/subjects/chapters.
+2. **Multiple Chapters**: Each exam can now include questions from multiple chapters, providing more flexibility in creating comprehensive assessments.
+
+### Migration Instructions
+
+To update your database with the new schema:
+
+1. Make sure your database is backed up
+2. Run the migration script:
+   ```
+   cd bk
+   node apply_migrations.js
+   ```
+
+## For Developers
+
+### Database Schema Changes
+
+- The `exams` table now references `courses` instead of having direct references to classes, subjects, and chapters
+- A new `exam_chapters` table has been added to associate exams with multiple chapters
+- API endpoints have been updated to reflect these changes
+
+### Frontend Changes
+
+- The exam creation form has been updated to select a course and multiple chapters
+- The exam listing page now shows course information 

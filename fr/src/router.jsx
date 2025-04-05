@@ -10,6 +10,11 @@ import MyQuestion from './Pages/MyQuestion';
 import Users from './Pages/Users';
 import Curriculum from './Pages/Curriculum';
 import Courses from './Pages/Courses';
+import CreateExam from './Pages/CreateExam';
+import ExamsList from './Pages/ExamsList';
+import ExamPortal from './Pages/ExamPortal';
+import ExamLeaderboard from './Pages/ExamLeaderboard';
+import StudentLeaderboard from './Pages/StudentLeaderboard';
 import PrivateRoute from './Authentications/PrivateRoute';
 import Login from './Login/Login';
 import { RouteErrorBoundary } from './components/ErrorBoundary';
@@ -17,6 +22,7 @@ import ErrorPage from './Pages/ErrorPage';
 import ExamplesPage from './Pages/ExamplesPage';
 import LatexTableConverter from './components/LatexTableConverter';
 import { AuthProvider } from './hooks/useAuth.jsx';
+import { AdminRoute, AdminTeacherRoute, NonStudentRoute } from './components/ProtectedRoutes';
 
 // Wrap components that need AuthProvider
 const withAuth = (Component) => {
@@ -30,17 +36,21 @@ const withAuth = (Component) => {
 const router = createBrowserRouter([
     {
         path: "/",
-        element: withAuth(<PrivateRoute><MainStructure></MainStructure></PrivateRoute>),
-        errorElement: <RouteErrorBoundary />,
+        element: withAuth(<PrivateRoute><MainStructure /></PrivateRoute>),
         children: [
             {
                 path:"/" ,
-                element: <Overview></Overview>,
+                element: <NonStudentRoute><Overview /></NonStudentRoute>,
                 errorElement: <RouteErrorBoundary />,
             },
             {
                 path:"/overview" ,
-                element: <Overview></Overview>,
+                element: <NonStudentRoute><Overview /></NonStudentRoute>,
+                errorElement: <RouteErrorBoundary />,
+            },
+            {
+                path:"/leaderboard" ,
+                element: <PrivateRoute><StudentLeaderboard /></PrivateRoute>,
                 errorElement: <RouteErrorBoundary />,
             },
             {
@@ -60,7 +70,7 @@ const router = createBrowserRouter([
             },
             {
                 path:"/curriculum" ,
-                element: <PrivateRoute requiredRole="admin"><Curriculum></Curriculum></PrivateRoute>,
+                element: <AdminRoute><Curriculum /></AdminRoute>,
                 errorElement: <RouteErrorBoundary />,
             },
             {
@@ -80,7 +90,32 @@ const router = createBrowserRouter([
             },
             {
                 path:"/latex-converter" ,
-                element: <LatexTableConverter></LatexTableConverter>,
+                element: <AdminTeacherRoute><LatexTableConverter></LatexTableConverter></AdminTeacherRoute>,
+                errorElement: <RouteErrorBoundary />,
+            },
+            {
+                path:"/exams" ,
+                element: <ExamsList></ExamsList>,
+                errorElement: <RouteErrorBoundary />,
+            },
+            {
+                path:"/exams/create" ,
+                element: <AdminTeacherRoute><CreateExam /></AdminTeacherRoute>,
+                errorElement: <RouteErrorBoundary />,
+            },
+            {
+                path:"/exams/edit/:id" ,
+                element: <AdminTeacherRoute><CreateExam /></AdminTeacherRoute>,
+                errorElement: <RouteErrorBoundary />,
+            },
+            {
+                path:"/exams/:id" ,
+                element: <PrivateRoute><ExamPortal></ExamPortal></PrivateRoute>,
+                errorElement: <RouteErrorBoundary />,
+            },
+            {
+                path:"/exams/:id/leaderboard" ,
+                element: <PrivateRoute><ExamLeaderboard></ExamLeaderboard></PrivateRoute>,
                 errorElement: <RouteErrorBoundary />,
             },
         ]

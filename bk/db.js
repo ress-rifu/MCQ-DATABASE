@@ -42,7 +42,16 @@ try {
     pool.connect()
         .then(client => {
             console.log('PostgreSQL database connected successfully');
-            client.release();
+            // Initialize database tables
+            initializeDatabase(client)
+                .then(() => {
+                    console.log('Database initialization completed');
+                    client.release();
+                })
+                .catch(err => {
+                    console.error('Error initializing database:', err.message);
+                    client.release();
+                });
         })
         .catch(err => {
             console.error('PostgreSQL database connection failed:', err.message);
@@ -51,6 +60,54 @@ try {
 } catch (error) {
     console.error('Error setting up PostgreSQL connection:', error.message);
     setupSQLiteDatabase();
+}
+
+// Function to initialize database tables
+async function initializeDatabase(client) {
+    try {
+        // Check if the exams table exists
+        const tableExists = await client.query(`
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'exams'
+            );
+        `);
+        
+        // If tables don't exist, create them
+        if (!tableExists.rows[0].exists) {
+            console.log('Exam tables do not exist. Creating tables...');
+            
+            // Read the schema file
+            const schemaPath = path.join(__dirname, 'db_schema.sql');
+            
+            if (fs.existsSync(schemaPath)) {
+                const schemaSQL = fs.readFileSync(schemaPath, 'utf8');
+                
+                // Execute each statement separately
+                const statements = schemaSQL.split(';').filter(stmt => stmt.trim().length > 0);
+                
+                for (const statement of statements) {
+                    try {
+                        await client.query(statement + ';');
+                    } catch (err) {
+                        // Log the error but continue with other statements
+                        console.warn(`Warning executing SQL statement: ${err.message}`);
+                        console.warn(`Statement: ${statement}`);
+                    }
+                }
+                
+                console.log('Database tables created successfully');
+            } else {
+                console.error('Schema file not found at', schemaPath);
+            }
+        } else {
+            console.log('Exam tables already exist');
+        }
+    } catch (error) {
+        console.error('Error in database initialization:', error);
+        throw error;
+    }
 }
 
 // SQLite fallback setup
@@ -114,5 +171,54 @@ function setupSQLiteDatabase() {
     
     console.log('SQLite fallback setup complete. Database will be in-memory only.');
 }
+
+// Create a sample student user for testing
+async function createTestStudent() {
+  try {
+    // Check if the student user already exists
+    const checkResult = await pool.query(
+      "SELECT * FROM users WHERE email = 'student@example.com'"
+    );
+    
+    if (checkResult.rows.length === 0) {
+      console.log('Creating test student user...');
+      
+      // Create a student user with a known password
+      const bcrypt = require('bcryptjs');
+      const hashedPassword = await bcrypt.hash('student123', 10);
+      
+      await pool.query(
+        `INSERT INTO users (name, email, password, role) 
+         VALUES ('Student User', 'student@example.com', $1, 'student')`,
+        [hashedPassword]
+      );
+      
+      console.log('Test student user created');
+    } else {
+      console.log('Test student user already exists');
+    }
+  } catch (error) {
+    console.error('Error creating test student:', error);
+  }
+}
+
+// Initialize the database and create test users
+async function initialize() {
+  try {
+    // Just test the connection first
+    await pool.query('SELECT NOW()');
+    console.log('Database connected successfully');
+    
+    // Create a test student user for development purposes
+    if (process.env.NODE_ENV !== 'production') {
+      await createTestStudent();
+    }
+  } catch (error) {
+    console.error('Error initializing database:', error);
+  }
+}
+
+// Call the initialize function when the application starts
+initialize();
 
 module.exports = pool;

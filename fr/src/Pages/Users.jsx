@@ -307,8 +307,9 @@ const Users = () => {
                 onChange={handleChange}
                 className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-300"
               >
-                <option value="teacher">Teacher</option>
                 <option value="admin">Admin</option>
+                <option value="teacher">Teacher</option>
+                <option value="student">Student</option>
               </select>
             </div>
           </div>
@@ -386,8 +387,9 @@ const Users = () => {
                   className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-300"
                   disabled={currentUser.role === "admin" && users.filter(u => u.role === "admin").length === 1}
                 >
-                  <option value="teacher">Teacher</option>
                   <option value="admin">Admin</option>
+                  <option value="teacher">Teacher</option>
+                  <option value="student">Student</option>
                 </select>
                 {currentUser.role === "admin" && users.filter(u => u.role === "admin").length === 1 && (
                   <p className="text-xs text-amber-500 mt-1">Cannot change role of the last admin user</p>
