@@ -4,7 +4,7 @@ const axios = require('axios');
 const FormData = require('form-data');
 
 // Configuration
-const API_URL = 'http://localhost:3001/api/curriculum/bulk-upload-chapters';
+const API_URL = 'http://localhost:3002/api/curriculum/bulk-upload-chapters';
 const EXCEL_FILE = path.join(__dirname, 'test-files', 'test-chapters.xlsx');
 const TOKEN = process.env.AUTH_TOKEN || ''; // Set your auth token in environment variable or replace here
 

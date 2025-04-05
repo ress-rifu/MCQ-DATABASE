@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BsCollection } from 'react-icons/bs';
-import { FaUserCog } from 'react-icons/fa';
+import { FaUserCog, FaLayerGroup } from 'react-icons/fa';
 import { FiDatabase, FiCode } from 'react-icons/fi';
 import { LuLayoutDashboard, LuUpload } from 'react-icons/lu';
 import { FiLogOut } from 'react-icons/fi';
@@ -136,6 +136,7 @@ const Sidebar = () => {
                         <NavItem to="/questionbank" icon={<FiDatabase />} label="Question Bank" />
                         <NavItem to="/myquestion" icon={<BsCollection />} label="My Questions" />
                         <NavItem to="/curriculum" icon={<HiOutlineBookOpen />} label="Curriculum" requiredRole="admin" />
+                        <NavItem to="/courses" icon={<FaLayerGroup />} label="Courses" requiredRole="admin" />
                         <NavItem to="/latex-converter" icon={<FiCode />} label="LaTeX Converter" />
                         {/* Only show user management for admins */}
                         {user.role === 'admin' && (

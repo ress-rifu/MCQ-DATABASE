@@ -2,8 +2,7 @@ import { useState, useEffect, useContext, createContext, useRef, useCallback } f
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { asyncTryCatch } from '../utils/errorUtils.jsx';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+import { API_BASE_URL } from '../apiConfig';
 
 // Create a context for authentication
 const AuthContext = createContext(null);

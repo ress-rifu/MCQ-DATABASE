@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../apiConfig';
+import { useAuth } from '../hooks/useAuth';
 
 function Login() {
     const [email, setEmail] = useState('');
@@ -12,6 +13,7 @@ function Login() {
     const navigate = useNavigate();
     const navigationAttempted = useRef(false);
     const navigationTimeoutRef = useRef(null);
+    const { login } = useAuth();
 
     useEffect(() => {
         // Animation on mount
@@ -69,31 +71,13 @@ function Login() {
         try {
             console.log('Sending login request to:', `${API_BASE_URL}/api/auth/login`);
             
-            const response = await axios.post(`${API_BASE_URL}/api/auth/login`, { 
+            // Use the login function from useAuth hook instead of direct axios call
+            await login({ 
                 email: email.trim(),
                 password 
             });
 
-            console.log('Login successful, received response:', response.status);
-
-            // Store the user data and token in localStorage
-            const { token, user } = response.data;
-            localStorage.setItem('token', token);
-            localStorage.setItem('user', JSON.stringify(user));
-
-            // Safe navigation that doesn't trigger multiple times
-            if (!navigationAttempted.current) {
-                navigationAttempted.current = true;
-                
-                // Clear any existing timeout
-                if (navigationTimeoutRef.current) {
-                    clearTimeout(navigationTimeoutRef.current);
-                }
-                
-                navigationTimeoutRef.current = setTimeout(() => {
-                    navigate('/', { replace: true });
-                }, 300);
-            }
+            // The useAuth hook will handle the redirect to home page
         } catch (err) {
             console.error('Login error:', err);
             

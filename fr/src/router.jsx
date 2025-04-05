@@ -9,6 +9,7 @@ import QuestionBank from './Pages/QuestionBank';
 import MyQuestion from './Pages/MyQuestion';
 import Users from './Pages/Users';
 import Curriculum from './Pages/Curriculum';
+import Courses from './Pages/Courses';
 import PrivateRoute from './Authentications/PrivateRoute';
 import Login from './Login/Login';
 import { RouteErrorBoundary } from './components/ErrorBoundary';
@@ -60,6 +61,11 @@ const router = createBrowserRouter([
             {
                 path:"/curriculum" ,
                 element: <PrivateRoute requiredRole="admin"><Curriculum></Curriculum></PrivateRoute>,
+                errorElement: <RouteErrorBoundary />,
+            },
+            {
+                path:"/courses" ,
+                element: <PrivateRoute requiredRole="admin"><Courses></Courses></PrivateRoute>,
                 errorElement: <RouteErrorBoundary />,
             },
             {

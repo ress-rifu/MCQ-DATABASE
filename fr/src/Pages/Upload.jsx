@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import LaTeXRenderer from '../components/LaTeXRenderer';
 import { FiUpload, FiDownload, FiFileText, FiSearch, FiCheck, FiInfo, FiX } from 'react-icons/fi';
+import DocxUpload from '../components/DocxUpload';
 
 const Upload = () => {
   const [file, setFile] = useState(null);
@@ -13,6 +14,7 @@ const Upload = () => {
   const [selectedSheet, setSelectedSheet] = useState("");
   const [importInProgress, setImportInProgress] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
+  const [activeTab, setActiveTab] = useState('excel'); // 'excel' or 'docx'
   
   // Add state for curriculum selection
   const [classes, setClasses] = useState([]);
@@ -24,6 +26,8 @@ const Upload = () => {
   const [filteredSubjects, setFilteredSubjects] = useState([]);
   const [filteredChapters, setFilteredChapters] = useState([]);
   const [currentStep, setCurrentStep] = useState(1); // 1: File Upload, 2: Review Data, 3: Select Curriculum
+  // Add state for metadata override toggle
+  const [useExcelMetadata, setUseExcelMetadata] = useState(false);
 
   // Add useEffect to fetch curriculum data when component loads
   useEffect(() => {
@@ -319,8 +323,8 @@ const Upload = () => {
       return;
     }
     
-    if (!selectedClass || !selectedSubject || !selectedChapter) {
-      showNotification('Please select class, subject, and chapter', 'warning');
+    if (!useExcelMetadata && (!selectedClass || !selectedSubject || !selectedChapter)) {
+      showNotification('Please select class, subject, and chapter or use data from Excel file', 'warning');
       return;
     }
 
@@ -328,21 +332,25 @@ const Upload = () => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('sheetName', selectedSheet);
-    formData.append('classId', selectedClass);
-    formData.append('subjectId', selectedSubject);
-    formData.append('chapterId', selectedChapter);
     
-    // Add class, subject, and chapter names
-    const selectedClassObj = classes.find(c => String(c.id) === String(selectedClass));
-    const selectedSubjectObj = subjects.find(s => String(s.id) === String(selectedSubject));
-    const selectedChapterObj = chapters.find(c => String(c.id) === String(selectedChapter));
-    
-    formData.append('className', selectedClassObj ? selectedClassObj.name : '');
-    formData.append('subjectName', selectedSubjectObj ? selectedSubjectObj.name : '');
-    formData.append('chapterName', selectedChapterObj ? selectedChapterObj.name : '');
+    // Only append curriculum IDs if we're overriding Excel metadata
+    if (!useExcelMetadata) {
+      formData.append('classId', selectedClass);
+      formData.append('subjectId', selectedSubject);
+      formData.append('chapterId', selectedChapter);
+      
+      // Add class, subject, and chapter names
+      const selectedClassObj = classes.find(c => String(c.id) === String(selectedClass));
+      const selectedSubjectObj = subjects.find(s => String(s.id) === String(selectedSubject));
+      const selectedChapterObj = chapters.find(c => String(c.id) === String(selectedChapter));
+      
+      formData.append('className', selectedClassObj ? selectedClassObj.name : '');
+      formData.append('subjectName', selectedSubjectObj ? selectedSubjectObj.name : '');
+      formData.append('chapterName', selectedChapterObj ? selectedChapterObj.name : '');
+    }
     
     // Flag to override data in Excel with UI selections
-    formData.append('overrideMetadata', 'true');
+    formData.append('overrideMetadata', useExcelMetadata ? 'false' : 'true');
 
     try {
       const token = localStorage.getItem('token');
@@ -354,14 +362,12 @@ const Upload = () => {
         return;
       }
       
-      console.log('Starting import request with curriculum data:', {
-        class: selectedClass,
-        className: selectedClassObj ? selectedClassObj.name : '',
-        subject: selectedSubject,
-        subjectName: selectedSubjectObj ? selectedSubjectObj.name : '',
-        chapter: selectedChapter,
-        chapterName: selectedChapterObj ? selectedChapterObj.name : '',
-        overrideMetadata: true
+      console.log('Starting import request with metadata settings:', {
+        useExcelMetadata: useExcelMetadata,
+        overrideMetadata: !useExcelMetadata,
+        class: !useExcelMetadata ? selectedClass : 'Using Excel data',
+        subject: !useExcelMetadata ? selectedSubject : 'Using Excel data',
+        chapter: !useExcelMetadata ? selectedChapter : 'Using Excel data'
       });
       
       const response = await fetch(`${API_URL}/api/csv/import-excel`, {
@@ -392,6 +398,40 @@ const Upload = () => {
       
       console.log('Import successful:', data);
       showNotification(`Successfully imported ${data.importedCount} questions`);
+      
+      // Create activity record for this import
+      try {
+        const activityPayload = {
+          action: 'import_questions',
+          entityType: 'questions',
+          entityId: null,
+          details: {
+            file_name: file.name,
+            question_ids: data.importedIds || [],
+            sheet_name: selectedSheet,
+            class: useExcelMetadata ? 'From Excel' : (selectedClassObj ? selectedClassObj.name : ''),
+            subject: useExcelMetadata ? 'From Excel' : (selectedSubjectObj ? selectedSubjectObj.name : ''),
+            chapter: useExcelMetadata ? 'From Excel' : (selectedChapterObj ? selectedChapterObj.name : ''),
+            imported_count: data.importedCount,
+            error_count: data.errorCount || 0
+          },
+          title: `Imported ${data.importedCount} questions from ${file.name}`,
+          description: useExcelMetadata 
+            ? `Imported questions using metadata from Excel file`
+            : `Imported ${data.importedCount} questions for ${selectedClassObj?.name || ''}, ${selectedSubjectObj?.name || ''}, ${selectedChapterObj?.name || ''}`
+        };
+        
+        const activityResponse = await axios.post(
+          `${API_BASE_URL}/api/activity`,
+          activityPayload,
+          { headers: getAuthHeader() }
+        );
+        
+        console.log('Activity recorded:', activityResponse.data);
+      } catch (activityError) {
+        console.error('Failed to record activity:', activityError);
+        // Don't prevent the user from proceeding if activity recording fails
+      }
       
       if (data.errorCount > 0) {
         showNotification(`${data.errorCount} rows had errors and were not imported`, 'warning');
@@ -465,84 +505,124 @@ const Upload = () => {
     return content;
   };
 
+  // Add handler for tab changes
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    // Reset progress when changing tabs
+    if (tab === 'excel') {
+      setFile(null);
+      setSheetData(null);
+      setCurrentStep(1);
+    }
+  };
+
+  // Add handler for DOCX upload success
+  const handleDocxUploadSuccess = (data) => {
+    showNotification(`Successfully imported ${data.inserted} MCQs from DOCX file.`, 'success');
+  };
+
+  // Add handler for DOCX upload error
+  const handleDocxUploadError = (error) => {
+    console.error("DOCX upload error:", error);
+    showNotification("Failed to import MCQs from DOCX file. Please try again.", "error");
+  };
+
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 py-8">
-      <div className="container mx-auto px-4 sm:px-6 max-w-6xl">
-        {/* Page header with sticky behavior similar to other pages */}
-        <div className="sticky top-4 z-30 mb-8">
-          <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200">
-            <div className="px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Upload Questions</h1>
-              <button
-                onClick={downloadTemplate}
-                className="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 transition-colors duration-200"
-              >
-                <FiDownload className="mr-2 h-4 w-4" />
-                Download Question Template
-              </button>
-            </div>
+    <div className="min-h-screen bg-white dark:bg-gray-900 pb-16">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Upload</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            Import questions from Excel files or Word documents.
+          </p>
+        </div>
+
+        {/* Tab Selector */}
+        <div className="mb-8">
+          <div className="flex space-x-2 border-b border-gray-200 dark:border-gray-700">
+            <button
+              className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-all duration-200 ${
+                activeTab === 'excel' 
+                ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 shadow-sm' 
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+              onClick={() => handleTabChange('excel')}
+            >
+              Excel Upload
+            </button>
+            <button
+              className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-all duration-200 ${
+                activeTab === 'docx' 
+                ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 shadow-sm' 
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+              onClick={() => handleTabChange('docx')}
+            >
+              Word Doc Upload
+            </button>
           </div>
         </div>
-        
-        {/* Main content area with max width for better readability */}
-        <div className="max-w-4xl mx-auto">
-          {/* Progress steps indicator */}
-          <div className="mb-8">
-            <div className="relative pt-1 pb-8">
-              {/* Progress bar line */}
-              <div className="absolute top-6 left-5 right-5 h-1 bg-gray-200 dark:bg-gray-700"></div>
-              <div 
-                className="absolute top-6 left-5 h-1 bg-indigo-600 dark:bg-indigo-500 transition-all duration-300" 
-                style={{ 
-                  width: currentStep === 1 ? '0%' : currentStep === 2 ? '50%' : '100%' 
-                }}
-              ></div>
-              
-              {/* Steps */}
-              <div className="flex justify-between px-0 relative z-10">
-                <div className="flex flex-col items-center">
-                  <div className={`flex items-center justify-center w-12 h-12 rounded-full text-base font-semibold shadow-sm transition-all duration-300 ${
-                    currentStep >= 1 
-                      ? 'bg-indigo-600 text-white' 
-                      : 'bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
-                  }`}>
-                    1
-                  </div>
-                  <span className={`mt-3 text-sm font-medium transition-all duration-300 ${
-                    currentStep >= 1 ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'
-                  }`}>Upload File</span>
-                </div>
+
+        {/* Excel Upload Tab */}
+        {activeTab === 'excel' && (
+          <div className="space-y-8">
+            {/* Progress steps indicator */}
+            <div className="mb-8">
+              <div className="relative pt-1 pb-8">
+                {/* Progress bar line */}
+                <div className="absolute top-6 left-5 right-5 h-1 bg-gray-200 dark:bg-gray-700"></div>
+                <div 
+                  className="absolute top-6 left-5 h-1 bg-indigo-600 dark:bg-indigo-500 transition-all duration-300" 
+                  style={{ 
+                    width: currentStep === 1 ? '0%' : currentStep === 2 ? '50%' : '100%' 
+                  }}
+                ></div>
                 
-                <div className="flex flex-col items-center">
-                  <div className={`flex items-center justify-center w-12 h-12 rounded-full text-base font-semibold shadow-sm transition-all duration-300 ${
-                    currentStep >= 2 
-                      ? 'bg-indigo-600 text-white' 
-                      : 'bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
-                  }`}>
-                    2
+                {/* Steps */}
+                <div className="flex justify-between px-0 relative z-10">
+                  <div className="flex flex-col items-center">
+                    <div className={`flex items-center justify-center w-12 h-12 rounded-full text-base font-semibold shadow-sm transition-all duration-300 ${
+                      currentStep >= 1 
+                        ? 'bg-indigo-600 text-white' 
+                        : 'bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
+                    }`}>
+                      1
+                    </div>
+                    <span className={`mt-3 text-sm font-medium transition-all duration-300 ${
+                      currentStep >= 1 ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'
+                    }`}>Upload File</span>
                   </div>
-                  <span className={`mt-3 text-sm font-medium transition-all duration-300 ${
-                    currentStep >= 2 ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'
-                  }`}>Review Data</span>
-                </div>
-                
-                <div className="flex flex-col items-center">
-                  <div className={`flex items-center justify-center w-12 h-12 rounded-full text-base font-semibold shadow-sm transition-all duration-300 ${
-                    currentStep >= 3 
-                      ? 'bg-indigo-600 text-white' 
-                      : 'bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
-                  }`}>
-                    3
+                  
+                  <div className="flex flex-col items-center">
+                    <div className={`flex items-center justify-center w-12 h-12 rounded-full text-base font-semibold shadow-sm transition-all duration-300 ${
+                      currentStep >= 2 
+                        ? 'bg-indigo-600 text-white' 
+                        : 'bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
+                    }`}>
+                      2
+                    </div>
+                    <span className={`mt-3 text-sm font-medium transition-all duration-300 ${
+                      currentStep >= 2 ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'
+                    }`}>Review Data</span>
                   </div>
-                  <span className={`mt-3 text-sm font-medium transition-all duration-300 ${
-                    currentStep >= 3 ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'
-                  }`}>Categorize</span>
+                  
+                  <div className="flex flex-col items-center">
+                    <div className={`flex items-center justify-center w-12 h-12 rounded-full text-base font-semibold shadow-sm transition-all duration-300 ${
+                      currentStep >= 3 
+                        ? 'bg-indigo-600 text-white' 
+                        : 'bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
+                    }`}>
+                      3
+                    </div>
+                    <span className={`mt-3 text-sm font-medium transition-all duration-300 ${
+                      currentStep >= 3 ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'
+                    }`}>Categorize</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          
-          <div className="space-y-8">
+            
             {/* Step 1: File Upload Section - Show when on step 1 */}
             {currentStep === 1 && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700 animate-fadeIn">
@@ -746,119 +826,130 @@ const Upload = () => {
               </div>
             )}
             
-            {/* Step 3: Select Class, Subject, Chapter - Show when on step 3 */}
+            {/* Step 3: Curriculum Selection */}
             {currentStep === 3 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700 animate-fadeIn">
-                <div className="bg-gradient-to-r from-blue-500 to-blue-600 py-4 px-6">
-                  <h2 className="text-xl font-semibold text-white">Step 3: Categorize Questions</h2>
-                </div>
-                
-                <div className="p-8">
-                  <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
-                    Assign your questions to a specific class, subject, and chapter to keep your question bank organized.
-                  </p>
-                  
-                  {/* Class Selection */}
-                  <div className="mb-5">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Class</label>
-                    <select
-                      value={selectedClass}
-                      onChange={(e) => setSelectedClass(e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-500 dark:focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 sm:text-sm"
-                      required
-                    >
-                      <option value="">Select Class</option>
-                      {classes.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  {/* Subject Selection - Only enabled if class is selected */}
-                  <div className="mb-5">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject</label>
-                    <select
-                      value={selectedSubject}
-                      onChange={(e) => setSelectedSubject(e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-500 dark:focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 sm:text-sm"
-                      disabled={!selectedClass}
-                      required
-                    >
-                      <option value="">Select Subject</option>
-                      {filteredSubjects.map(s => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  {/* Chapter Selection - Only enabled if subject is selected */}
-                  <div className="mb-8">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Chapter</label>
-                    <select
-                      value={selectedChapter}
-                      onChange={(e) => setSelectedChapter(e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-500 dark:focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 sm:text-sm"
-                      disabled={!selectedSubject}
-                      required
-                    >
-                      <option value="">Select Chapter</option>
-                      {filteredChapters.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  {/* Info Section */}
-                  <div className="mb-8 p-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800/30 rounded-md">
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        <FiInfo className="h-5 w-5 text-yellow-400 dark:text-yellow-300" />
+              <div className="mt-12 animate-fadeIn">
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200 p-6">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                    Curriculum Selection
+                  </h2>
+
+                  {/* Add toggle for using Excel metadata */}
+                  <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <div className="relative">
+                        <input 
+                          type="checkbox" 
+                          className="sr-only" 
+                          checked={useExcelMetadata} 
+                          onChange={() => setUseExcelMetadata(!useExcelMetadata)}
+                        />
+                        <div className={`block w-14 h-8 rounded-full transition-colors duration-200 ${useExcelMetadata ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+                        <div className={`absolute left-1 top-1 bg-white dark:bg-gray-200 w-6 h-6 rounded-full transition-transform duration-200 ${useExcelMetadata ? 'transform translate-x-6' : ''}`}></div>
                       </div>
-                      <div className="ml-3">
-                        <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Important</h3>
-                        <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-400">
-                          <p>The Class, Subject, and Chapter you select here will be used for <strong>ALL</strong> questions in the uploaded file, overriding any values in the Excel sheet. This ensures proper organization in your Question Bank.</p>
-                        </div>
+                      <div className="text-gray-700 dark:text-gray-300 font-medium">
+                        Use class, subject, and chapter data from Excel file
+                      </div>
+                    </label>
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                      {useExcelMetadata ? 
+                        "The uploaded data will be imported using class, subject, and chapter values from the Excel file." : 
+                        "Override the Excel file's class, subject, and chapter values with your selections below."}
+                    </p>
+                  </div>
+
+                  {/* Class, Subject, Chapter Selection (only shown if not using Excel metadata) */}
+                  {!useExcelMetadata && (
+                    <div className="space-y-6">
+                      {/* Class Selection */}
+                      <div>
+                        <label htmlFor="class" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Class
+                        </label>
+                        <select
+                          id="class"
+                          value={selectedClass}
+                          onChange={(e) => setSelectedClass(e.target.value)}
+                          className="block w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                        >
+                          <option value="">Select a class</option>
+                          {classes.map((classItem) => (
+                            <option key={classItem.id} value={classItem.id}>
+                              {classItem.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Subject Selection */}
+                      <div>
+                        <label htmlFor="subject" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Subject
+                        </label>
+                        <select
+                          id="subject"
+                          value={selectedSubject}
+                          onChange={(e) => setSelectedSubject(e.target.value)}
+                          disabled={!selectedClass}
+                          className="block w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 disabled:opacity-60"
+                        >
+                          <option value="">Select a subject</option>
+                          {filteredSubjects.map((subject) => (
+                            <option key={subject.id} value={subject.id}>
+                              {subject.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Chapter Selection */}
+                      <div>
+                        <label htmlFor="chapter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Chapter
+                        </label>
+                        <select
+                          id="chapter"
+                          value={selectedChapter}
+                          onChange={(e) => setSelectedChapter(e.target.value)}
+                          disabled={!selectedSubject}
+                          className="block w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 disabled:opacity-60"
+                        >
+                          <option value="">Select a chapter</option>
+                          {filteredChapters.map((chapter) => (
+                            <option key={chapter.id} value={chapter.id}>
+                              {chapter.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex flex-col sm:flex-row gap-4 justify-between">
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="flex justify-end gap-3 mt-8">
                     <button
-                      onClick={() => setCurrentStep(2)} // Go back to step 2
-                      className="inline-flex justify-center items-center px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 transition-colors duration-200"
+                      type="button"
+                      onClick={() => setCurrentStep(2)}
+                      className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 transition-colors duration-200"
                     >
-                      Back to Review
+                      Back
                     </button>
-                    
                     <button
+                      type="button"
                       onClick={importQuestions}
-                      disabled={importInProgress || !selectedClass || !selectedSubject || !selectedChapter}
-                      className={`flex-1 sm:flex-none inline-flex justify-center items-center px-8 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                        importInProgress || !selectedClass || !selectedSubject || !selectedChapter
-                          ? 'bg-gray-400 dark:bg-gray-600 opacity-50 cursor-not-allowed' 
-                          : 'bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-gray-900'
-                      } transition-colors duration-200`}
+                      disabled={importInProgress || (!useExcelMetadata && (!selectedClass || !selectedSubject || !selectedChapter))}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500 focus:ring-offset-indigo-200 text-white rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {importInProgress ? (
                         <>
-                          <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
                           Importing...
                         </>
                       ) : (
-                        <>
-                          <FiCheck className="mr-2" />
-                          Import Questions
-                        </>
+                        'Import Questions'
                       )}
                     </button>
                   </div>
@@ -866,7 +957,17 @@ const Upload = () => {
               </div>
             )}
           </div>
-        </div>
+        )}
+
+        {/* Word Document Upload Tab */}
+        {activeTab === 'docx' && (
+          <div className="animate-fadeIn">
+            <DocxUpload 
+              onSuccess={handleDocxUploadSuccess} 
+              onError={handleDocxUploadError} 
+            />
+          </div>
+        )}
       </div>
 
       {/* Custom Toast Notification - consistent with other pages */}

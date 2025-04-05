@@ -1,0 +1,2 @@
+Pillow==9.5.0
+pypandoc==1.11 

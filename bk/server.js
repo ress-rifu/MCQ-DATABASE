@@ -7,6 +7,7 @@ const authMiddleware = require('./middleware/authMiddleware');
 const pool = require('./db');
 const multer = require('multer');
 const xlsx = require('xlsx');
+const mammoth = require('mammoth');
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -20,6 +21,9 @@ const questionsRoute = require('./routes/questions');
 const userRoutes = require('./routes/userRoutes');
 const curriculumRoutes = require('./routes/curriculum');
 const activityRoutes = require('./routes/activity');
+const docxUploadRoutes = require('./routes/docxUpload');
+const apiRoutes = require('./routes/api');
+const coursesRoutes = require('./routes/courses');
 
 const app = express();
 
@@ -157,6 +161,21 @@ app.post('/api/csv/import-excel', authMiddleware, excelUpload.single('file'), as
         console.log('File received:', req.file.path);
         console.log('Selected sheet:', req.body.sheetName);
         
+        // Check if we need to override metadata from the form
+        const overrideMetadata = req.body.overrideMetadata === 'true';
+        const formClassName = req.body.className || '';
+        const formSubjectName = req.body.subjectName || '';
+        const formChapterName = req.body.chapterName || '';
+        
+        console.log('Override metadata:', overrideMetadata);
+        if (overrideMetadata) {
+            console.log('Using form data:', {
+                class: formClassName,
+                subject: formSubjectName,
+                chapter: formChapterName
+            });
+        }
+        
         // First, let's alter the answer column to accept longer text
         try {
             await client.query('ALTER TABLE questions ALTER COLUMN answer TYPE TEXT');
@@ -230,6 +249,7 @@ app.post('/api/csv/import-excel', authMiddleware, excelUpload.single('file'), as
         // Initialize counters for tracking import results
         let importedCount = 0;
         let errors = [];
+        let importedIds = [];
         
         // Process each row with individual transactions
         for (let i = 0; i < data.length; i++) {
@@ -243,9 +263,10 @@ app.post('/api/csv/import-excel', authMiddleware, excelUpload.single('file'), as
                 
                 // Map Excel columns to database fields - accept any available fields
                 const questionData = {
-                    subject: row.subject || row.Subject || row.SUBJECT || 'N/A',
-                    classname: row.classname || row.class || row.Class || row.CLASS || row['Class Name'] || row.className || 'N/A',
-                    chapter: row.chapter || row.Chapter || row.CHAPTER || '',
+                    // If overrideMetadata is true, use form values, otherwise use Excel values
+                    subject: overrideMetadata ? formSubjectName : (row.subject || row.Subject || row.SUBJECT || 'N/A'),
+                    classname: overrideMetadata ? formClassName : (row.classname || row.class || row.Class || row.CLASS || row['Class Name'] || row.className || 'N/A'),
+                    chapter: overrideMetadata ? formChapterName : (row.chapter || row.Chapter || row.CHAPTER || ''),
                     topic: row.topic || row.Topic || row.TOPIC || '',
                     ques: row.ques || row.question || row.Question || row.QUESTION || row.q || row.Q || row.text || row.Text || 'N/A',
                     option_a: row.option_a || row.optionA || row.Option_A || row.OptionA || row.A || row.a || '',
@@ -319,6 +340,9 @@ app.post('/api/csv/import-excel', authMiddleware, excelUpload.single('file'), as
                 const result = await rowClient.query(insertQuery, values);
                 console.log(`Inserted row ${i+2} with ID:`, result.rows[0].id);
                 
+                // Store the inserted question ID
+                importedIds.push(result.rows[0].id);
+                
                 // Commit this row's transaction
                 await rowClient.query('COMMIT');
                 importedCount++;
@@ -346,7 +370,8 @@ app.post('/api/csv/import-excel', authMiddleware, excelUpload.single('file'), as
             message: 'Import completed',
             importedCount,
             errorCount: errors.length,
-            errors: errors.length > 0 ? errors : undefined
+            errors: errors.length > 0 ? errors : undefined,
+            importedIds: importedIds
         });
     } catch (error) {
         console.error('Error importing questions:', error);
@@ -375,11 +400,16 @@ app.use('/api/csv/template', (req, res) => {
     res.send(csvHeader);
 });
 
+// Add direct API routes used by the frontend components
+app.use('/api', apiRoutes);
+
 // Protected routes
 app.use('/api/questions', authMiddleware, questionsRoute);
 app.use('/api/users', authMiddleware, userRoutes);
 app.use('/api/curriculum', authMiddleware, curriculumRoutes);
 app.use('/api/activity', authMiddleware, activityRoutes);
+app.use('/api/docx', authMiddleware, docxUploadRoutes);
+app.use('/api/courses', coursesRoutes);
 
 // Add a global error handler
 app.use((err, req, res, next) => {
@@ -420,7 +450,7 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });

@@ -4,7 +4,7 @@ const path = require('path');
 const FormData = require('form-data');
 
 // Configuration
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = 'http://localhost:3002';
 const CSV_FILE_PATH = path.join(__dirname, '..', 'test_questions.csv');
 const AUTH_TOKEN = process.env.TEST_TOKEN || ''; // Set this to a valid token
 

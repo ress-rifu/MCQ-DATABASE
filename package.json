@@ -2,6 +2,15 @@
   "dependencies": {
     "axios": "^1.8.4",
     "form-data": "^4.0.2",
+    "mammoth": "^1.9.0",
     "xlsx": "^0.18.5"
+  },
+  "scripts": {
+    "dev:backend": "cd bk && npm run dev",
+    "dev:frontend": "cd fr && npm run dev",
+    "dev": "echo \"Run 'npm run dev:backend' and 'npm run dev:frontend' in separate terminals\"",
+    "start:backend": "cd bk && npm start",
+    "start:frontend": "cd fr && npm run dev",
+    "start": "echo \"Run 'npm run start:backend' and 'npm run start:frontend' in separate terminals\""
   }
 }

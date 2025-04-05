@@ -90,7 +90,7 @@ const Modal = ({
         {/* Modal panel with animation */}
         <div 
           ref={modalRef}
-          className={`inline-block align-bottom sm:align-middle bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform sm:my-8 w-full modal-content-animate ${getModalWidth()}`}
+          className={`inline-block align-bottom sm:align-middle bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-md transform sm:my-8 w-full modal-content-animate ${getModalWidth()}`}
           onClick={(e) => e.stopPropagation()}
           style={{ position: 'relative', zIndex: 50 }}
         >

@@ -1635,10 +1635,56 @@ const QuestionBank = () => {
                                         <option value="">Select Chapter</option>
                                         {filteredEditChapters.map(c => (
                                             <option key={c.id} value={c.id}>
-                                                {c.name} {c.number ? `(${c.number})` : ''}
+                                                {c.name}
                                             </option>
                                         ))}
                                     </select>
+                                </div>
+                            </div>
+                            
+                            {/* Metadata */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Topic
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="topic"
+                                        value={editData.topic || ''}
+                                        onChange={handleEditChange('topic')}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-300"
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Difficulty Level
+                                    </label>
+                                    <select
+                                        name="difficulty_level"
+                                        value={editData.difficulty_level || ''}
+                                        onChange={handleEditChange('difficulty_level')}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-300"
+                                    >
+                                        <option value="">Select Difficulty</option>
+                                        <option value="Easy">Easy</option>
+                                        <option value="Medium">Medium</option>
+                                        <option value="Hard">Hard</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Question Serial
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="qserial"
+                                        value={editData.qserial || ''}
+                                        onChange={handleEditChange('qserial')}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-300"
+                                    />
                                 </div>
                             </div>
                             
@@ -1670,49 +1716,165 @@ const QuestionBank = () => {
                             
                             {/* Options */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                                     Options
-                                </label>
+                                </h3>
+                                
                                 <div className="space-y-3">
-                                    {editData.options?.map((option, index) => (
-                                        <div key={index} className="flex items-start">
-                                            <div className="flex items-center h-10 mt-1">
-                                                <input
-                                                    id={`option-${index}`}
-                                                    type="radio"
-                                                    checked={editData.answer === String.fromCharCode(65 + index)}
-                                                    onChange={() => handleEditAnswerChange(String.fromCharCode(65 + index))}
-                                                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded-full focus:ring-indigo-500"
+                                    {/* Option A */}
+                                    <div>
+                                        <div className="flex items-center mb-1">
+                                            <input
+                                                type="radio"
+                                                id="option_a"
+                                                name="answer"
+                                                value="A"
+                                                checked={editData.answer === 'A' || editData.answer === 'a'}
+                                                onChange={() => handleEditAnswerChange('A')}
+                                                className="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                                            />
+                                            <label htmlFor="option_a" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Option A
+                                            </label>
+                                        </div>
+                                        <div className="relative">
+                                            <div className="rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white dark:bg-gray-800">
+                                                <EnhancedRichTextEditor 
+                                                    value={editData.option_a || ''}
+                                                    onChange={(content) => handleEditRichTextChange('option_a', content)}
+                                                    onEquationAdd={() => openEquationModal('option_a')}
                                                 />
                                             </div>
-                                            <div className="ml-3 flex-1">
-                                                <div className="relative rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white dark:bg-gray-800">
-                                                    <EnhancedRichTextEditor 
-                                                        value={option || ''}
-                                                        onChange={(content) => handleEditOptionChange(index, content)}
-                                                        onEquationAdd={() => openEquationModal(`option-${index}`)}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openEquationModal(`option-${index}`)}
-                                                        className="absolute right-2 bottom-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                                                    >
-                                                        <span className="sr-only">Add Equation</span>
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => openEquationModal('option_a')}
+                                                className="absolute right-2 bottom-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                                            >
+                                                <span className="sr-only">Add Equation</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+                                                </svg>
+                                            </button>
                                         </div>
-                                    ))}
+                                    </div>
+                                    
+                                    {/* Option B */}
+                                    <div>
+                                        <div className="flex items-center mb-1">
+                                            <input
+                                                type="radio"
+                                                id="option_b"
+                                                name="answer"
+                                                value="B"
+                                                checked={editData.answer === 'B' || editData.answer === 'b'}
+                                                onChange={() => handleEditAnswerChange('B')}
+                                                className="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                                            />
+                                            <label htmlFor="option_b" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Option B
+                                            </label>
+                                        </div>
+                                        <div className="relative">
+                                            <div className="rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white dark:bg-gray-800">
+                                                <EnhancedRichTextEditor 
+                                                    value={editData.option_b || ''}
+                                                    onChange={(content) => handleEditRichTextChange('option_b', content)}
+                                                    onEquationAdd={() => openEquationModal('option_b')}
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => openEquationModal('option_b')}
+                                                className="absolute right-2 bottom-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                                            >
+                                                <span className="sr-only">Add Equation</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Option C */}
+                                    <div>
+                                        <div className="flex items-center mb-1">
+                                            <input
+                                                type="radio"
+                                                id="option_c"
+                                                name="answer"
+                                                value="C"
+                                                checked={editData.answer === 'C' || editData.answer === 'c'}
+                                                onChange={() => handleEditAnswerChange('C')}
+                                                className="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                                            />
+                                            <label htmlFor="option_c" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Option C
+                                            </label>
+                                        </div>
+                                        <div className="relative">
+                                            <div className="rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white dark:bg-gray-800">
+                                                <EnhancedRichTextEditor 
+                                                    value={editData.option_c || ''}
+                                                    onChange={(content) => handleEditRichTextChange('option_c', content)}
+                                                    onEquationAdd={() => openEquationModal('option_c')}
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => openEquationModal('option_c')}
+                                                className="absolute right-2 bottom-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                                            >
+                                                <span className="sr-only">Add Equation</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Option D */}
+                                    <div>
+                                        <div className="flex items-center mb-1">
+                                            <input
+                                                type="radio"
+                                                id="option_d"
+                                                name="answer"
+                                                value="D"
+                                                checked={editData.answer === 'D' || editData.answer === 'd'}
+                                                onChange={() => handleEditAnswerChange('D')}
+                                                className="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                                            />
+                                            <label htmlFor="option_d" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Option D
+                                            </label>
+                                        </div>
+                                        <div className="relative">
+                                            <div className="rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white dark:bg-gray-800">
+                                                <EnhancedRichTextEditor 
+                                                    value={editData.option_d || ''}
+                                                    onChange={(content) => handleEditRichTextChange('option_d', content)}
+                                                    onEquationAdd={() => openEquationModal('option_d')}
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => openEquationModal('option_d')}
+                                                className="absolute right-2 bottom-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                                            >
+                                                <span className="sr-only">Add Equation</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
                             {/* Explanation */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Explanation (Optional)
+                                    Explanation
                                 </label>
                                 <div className="relative">
                                     <div className="rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white dark:bg-gray-800">
@@ -1733,6 +1895,46 @@ const QuestionBank = () => {
                                         </svg>
                                     </button>
                                 </div>
+                            </div>
+                            
+                            {/* Hint */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Hint
+                                </label>
+                                <div className="relative">
+                                    <div className="rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white dark:bg-gray-800">
+                                        <EnhancedRichTextEditor 
+                                            value={editData.hint || ''}
+                                            onChange={(content) => handleEditRichTextChange('hint', content)}
+                                            onEquationAdd={() => openEquationModal('hint')}
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => openEquationModal('hint')}
+                                        className="absolute right-2 bottom-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                                    >
+                                        <span className="sr-only">Add Equation</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            {/* Reference */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Reference
+                                </label>
+                                <input
+                                    type="text"
+                                    name="reference"
+                                    value={editData.reference || ''}
+                                    onChange={handleEditChange('reference')}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-300"
+                                />
                             </div>
                         </div>
                         

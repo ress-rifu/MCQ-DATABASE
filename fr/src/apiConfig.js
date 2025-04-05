@@ -1,5 +1,5 @@
 // API Configuration File
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = 'http://localhost:3002';
 const API_URL = API_BASE_URL; // Adding API_URL as an alias for API_BASE_URL
 
 // Helper for adding authentication headers

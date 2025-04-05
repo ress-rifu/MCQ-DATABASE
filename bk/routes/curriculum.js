@@ -250,8 +250,7 @@ router.get('/subjects/:subjectId/chapters', async (req, res) => {
              FROM chapters ch 
              JOIN subjects s ON ch.subject_id = s.id 
              JOIN classes c ON s.class_id = c.id 
-             WHERE ch.subject_id = $1 
-             ORDER BY ch.name`,
+             WHERE ch.subject_id = $1 ORDER BY ch.name`,
             [subjectId]
         );
         res.json(result.rows);
@@ -381,6 +380,164 @@ router.delete('/chapters/:id', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('Error deleting chapter:', err);
         res.status(500).json({ message: 'Failed to delete chapter' });
+    }
+});
+
+// Get all topics for a chapter
+router.get('/chapters/:chapterId/topics', async (req, res) => {
+    try {
+        const { chapterId } = req.params;
+        
+        // Check if chapter exists
+        const chapterCheck = await pool.query('SELECT * FROM chapters WHERE id = $1', [chapterId]);
+        if (chapterCheck.rows.length === 0) {
+            return res.status(404).json({ message: 'Chapter not found' });
+        }
+        
+        const result = await pool.query(
+            `SELECT t.*, ch.name as chapter_name, s.name as subject_name, c.name as class_name 
+             FROM topics t
+             JOIN chapters ch ON t.chapter_id = ch.id
+             JOIN subjects s ON ch.subject_id = s.id
+             JOIN classes c ON s.class_id = c.id
+             WHERE t.chapter_id = $1
+             ORDER BY t.name`,
+            [chapterId]
+        );
+        
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching topics:', err);
+        res.status(500).json({ message: 'Failed to fetch topics' });
+    }
+});
+
+// Get all topics across all chapters
+router.get('/topics', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT t.*, ch.name as chapter_name, s.name as subject_name, c.name as class_name 
+             FROM topics t
+             JOIN chapters ch ON t.chapter_id = ch.id
+             JOIN subjects s ON ch.subject_id = s.id
+             JOIN classes c ON s.class_id = c.id
+             ORDER BY c.name, s.name, ch.name, t.name`
+        );
+        
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching all topics:', err);
+        res.status(500).json({ message: 'Failed to fetch topics' });
+    }
+});
+
+// Add a new topic
+router.post('/topics', authenticateToken, async (req, res) => {
+    try {
+        const { name, chapter_id, description } = req.body;
+        
+        if (!name || !chapter_id) {
+            return res.status(400).json({ message: 'Topic name and chapter ID are required' });
+        }
+
+        // Check if chapter exists and get related info
+        const chapterCheck = await pool.query(
+            `SELECT ch.*, s.name as subject_name, c.name as class_name 
+             FROM chapters ch 
+             JOIN subjects s ON ch.subject_id = s.id 
+             JOIN classes c ON s.class_id = c.id 
+             WHERE ch.id = $1`, 
+            [chapter_id]
+        );
+        
+        if (chapterCheck.rows.length === 0) {
+            return res.status(404).json({ message: 'Chapter not found' });
+        }
+
+        const result = await pool.query(
+            'INSERT INTO topics (name, chapter_id, description) VALUES ($1, $2, $3) RETURNING *',
+            [name, chapter_id, description || null]
+        );
+        
+        // Prepare response with related info
+        const topic = result.rows[0];
+        topic.chapter_name = chapterCheck.rows[0].name;
+        topic.subject_name = chapterCheck.rows[0].subject_name;
+        topic.class_name = chapterCheck.rows[0].class_name;
+
+        res.status(201).json(topic);
+    } catch (err) {
+        if (err.code === '23505') { // Unique violation
+            return res.status(400).json({ message: 'Topic already exists for this chapter' });
+        }
+        console.error('Error adding topic:', err);
+        res.status(500).json({ message: 'Failed to add topic' });
+    }
+});
+
+// Update a topic
+router.put('/topics/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, chapter_id, description } = req.body;
+        
+        if (!name || !chapter_id) {
+            return res.status(400).json({ message: 'Topic name and chapter ID are required' });
+        }
+
+        // Check if chapter exists and get related info
+        const chapterCheck = await pool.query(
+            `SELECT ch.*, s.name as subject_name, c.name as class_name 
+             FROM chapters ch 
+             JOIN subjects s ON ch.subject_id = s.id 
+             JOIN classes c ON s.class_id = c.id 
+             WHERE ch.id = $1`, 
+            [chapter_id]
+        );
+        
+        if (chapterCheck.rows.length === 0) {
+            return res.status(404).json({ message: 'Chapter not found' });
+        }
+
+        const result = await pool.query(
+            'UPDATE topics SET name = $1, chapter_id = $2, description = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *',
+            [name, chapter_id, description || null, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Topic not found' });
+        }
+
+        // Prepare response with related info
+        const topic = result.rows[0];
+        topic.chapter_name = chapterCheck.rows[0].name;
+        topic.subject_name = chapterCheck.rows[0].subject_name;
+        topic.class_name = chapterCheck.rows[0].class_name;
+
+        res.json(topic);
+    } catch (err) {
+        if (err.code === '23505') { // Unique violation
+            return res.status(400).json({ message: 'Topic name already exists for this chapter' });
+        }
+        console.error('Error updating topic:', err);
+        res.status(500).json({ message: 'Failed to update topic' });
+    }
+});
+
+// Delete a topic
+router.delete('/topics/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query('DELETE FROM topics WHERE id = $1 RETURNING *', [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Topic not found' });
+        }
+
+        res.json({ message: 'Topic deleted successfully' });
+    } catch (err) {
+        console.error('Error deleting topic:', err);
+        res.status(500).json({ message: 'Failed to delete topic' });
     }
 });
 
@@ -574,18 +731,106 @@ router.post('/bulk-upload-chapters', authenticateToken, excelUpload.single('file
     }
 });
 
+// Bulk upload topics from Excel file
+router.post('/topics/bulk-upload', authenticateToken, excelUpload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        // Get chapter_id from form data
+        const chapterId = req.body.chapter_id;
+        if (!chapterId) {
+            return res.status(400).json({ message: 'Chapter ID is required' });
+        }
+
+        // Check if chapter exists and get related info
+        const chapterCheck = await pool.query(
+            `SELECT ch.*, s.name as subject_name, c.name as class_name 
+             FROM chapters ch 
+             JOIN subjects s ON ch.subject_id = s.id 
+             JOIN classes c ON s.class_id = c.id 
+             WHERE ch.id = $1`, 
+            [chapterId]
+        );
+        
+        if (chapterCheck.rows.length === 0) {
+            return res.status(404).json({ message: 'Chapter not found' });
+        }
+
+        // Read Excel file
+        const workbook = xlsx.readFile(req.file.path);
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = xlsx.utils.sheet_to_json(worksheet);
+
+        if (jsonData.length === 0) {
+            return res.status(400).json({ message: 'No data found in the Excel file' });
+        }
+
+        let inserted = 0;
+        let duplicates = 0;
+        const errors = [];
+
+        // Process each row
+        for (const row of jsonData) {
+            try {
+                // Check if topic exists for this chapter
+                const topicCheck = await pool.query(
+                    'SELECT * FROM topics WHERE name = $1 AND chapter_id = $2',
+                    [row.Name, chapterId]
+                );
+                
+                if (topicCheck.rows.length > 0) {
+                    duplicates++;
+                    continue;
+                }
+                
+                // Insert topic
+                await pool.query(
+                    'INSERT INTO topics (name, chapter_id, description) VALUES ($1, $2, $3)',
+                    [row.Name, chapterId, row.Description || null]
+                );
+                
+                inserted++;
+            } catch (err) {
+                console.error('Error processing row:', err, row);
+                errors.push(`Error processing topic "${row.Name}": ${err.message}`);
+            }
+        }
+
+        // Delete temp file
+        fs.unlinkSync(req.file.path);
+
+        res.status(200).json({
+            message: 'Topics processed successfully',
+            results: { total: jsonData.length, inserted, duplicates, errors }
+        });
+    } catch (err) {
+        console.error('Error processing topics upload:', err);
+        
+        // Clean up temp file if it exists
+        if (req.file && req.file.path) {
+            fs.unlinkSync(req.file.path);
+        }
+        
+        res.status(500).json({ message: 'Failed to process topics upload', error: err.message });
+    }
+});
+
 // Add count endpoint for dashboard
 router.get('/count', async (req, res) => {
   try {
-    // Count all curriculum items (classes + subjects + chapters)
+    // Count all curriculum items (classes + subjects + chapters + topics)
     const classesResult = await pool.query('SELECT COUNT(*) FROM classes');
     const subjectsResult = await pool.query('SELECT COUNT(*) FROM subjects');
     const chaptersResult = await pool.query('SELECT COUNT(*) FROM chapters');
+    const topicsResult = await pool.query('SELECT COUNT(*) FROM topics');
     
     const totalCount = 
       parseInt(classesResult.rows[0].count) + 
       parseInt(subjectsResult.rows[0].count) + 
-      parseInt(chaptersResult.rows[0].count);
+      parseInt(chaptersResult.rows[0].count) +
+      parseInt(topicsResult.rows[0].count);
     
     res.json({ count: totalCount });
   } catch (error) {
