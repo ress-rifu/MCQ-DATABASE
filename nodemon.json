@@ -1,0 +1,8 @@
+{
+  "watch": ["server.js", "package.json"],
+  "ext": "js,json",
+  "ignore": ["node_modules/", "fr/", "bk/"],
+  "env": {
+    "NODE_ENV": "development"
+  }
+} 

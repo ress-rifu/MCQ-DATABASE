@@ -112,6 +112,31 @@ const useAxiosWithErrorHandling = (options = {}) => {
         return Promise.reject(error);
       }
       
+      // For certain endpoints, we want to handle 500 errors specially
+      const url = error.config?.url || '';
+      
+      // For activity endpoint, return empty array on server error
+      if (url.includes('/api/activity/recent') && error.response?.status === 500) {
+        console.warn('Activity endpoint returned 500, returning empty data');
+        return Promise.resolve({ data: { activities: [] } });
+      }
+      
+      // For stats endpoints, return default values on server error
+      if (url.includes('/api/questions/stats') && error.response?.status === 500) {
+        console.warn('Questions stats endpoint returned 500, returning default data');
+        return Promise.resolve({ data: { count: 0, userCount: 0 } });
+      }
+      
+      if (url.includes('/api/curriculum/count') && error.response?.status === 500) {
+        console.warn('Curriculum count endpoint returned 500, returning default data');
+        return Promise.resolve({ data: { count: 0 } });
+      }
+      
+      if (url.includes('/api/users/count') && error.response?.status === 500) {
+        console.warn('Users count endpoint returned 500, returning default data');
+        return Promise.resolve({ data: { count: 0 } });
+      }
+      
       return Promise.reject(error);
     }
   );

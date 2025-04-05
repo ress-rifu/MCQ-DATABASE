@@ -3,11 +3,23 @@ const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
 const fs = require('fs');
+const dotenv = require('dotenv');
 const authMiddleware = require('./middleware/authMiddleware');
 const pool = require('./db');
 const multer = require('multer');
 const xlsx = require('xlsx');
 const mammoth = require('mammoth');
+
+// Load environment variables
+// First try to load from parent directory
+try {
+    dotenv.config({ path: path.resolve(__dirname, '../.env') });
+    console.log('Loaded CORS settings from root .env file');
+} catch (error) {
+    console.warn('Could not load root .env file:', error.message);
+}
+// Then load local .env (which will override duplicates)
+dotenv.config();
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -27,8 +39,15 @@ const coursesRoutes = require('./routes/courses');
 
 const app = express();
 
+// Parse CORS origins from environment variable
+const corsOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [];
+const corsCredentials = process.env.CORS_CREDENTIALS === 'true';
+
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: corsOrigins.length > 0 ? corsOrigins : true,
+    credentials: corsCredentials
+}));
 app.use(express.json());
 app.use(morgan('dev'));
 

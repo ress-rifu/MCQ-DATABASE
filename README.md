@@ -1,6 +1,140 @@
-# Question Database System
+# MCQ Database System
 
-A comprehensive question management system with frontend, backend, and PostgreSQL database integration.
+A comprehensive MCQ (Multiple Choice Question) management system with both frontend and backend components.
+
+## Project Structure
+
+This project is organized with a modular architecture:
+
+- **Root Directory**: Contains a simplified server for development and testing
+- **`bk/`**: The main backend Express server with complete functionality
+- **`fr/`**: The frontend React application built with Vite
+- **`test-files/`**: Sample files for testing
+
+## Centralized CORS Configuration
+
+This project uses a centralized CORS configuration through environment variables:
+
+1. In the root directory, the `.env` file contains CORS settings that are shared across the entire project:
+   ```
+   CORS_ORIGINS=http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174
+   CORS_CREDENTIALS=true
+   ```
+
+2. Both the main server and backend server read these settings and apply them to their CORS configuration.
+
+3. To add or modify allowed origins:
+   - Update the `CORS_ORIGINS` variable in the root `.env` file
+   - Restart the servers for changes to take effect
+
+4. The frontend API URL should match one of the allowed origins in the `CORS_ORIGINS` list.
+
+## Database Setup
+
+The application requires a PostgreSQL database. There are two ways to set up the database:
+
+### Automatic Setup
+
+Run the database initialization script:
+
+```bash
+npm run init-db
+```
+
+This interactive script will:
+1. Check if PostgreSQL is installed
+2. Prompt you for database credentials
+3. Create the necessary .env files
+4. Test the database connection
+5. Initialize the database schema (optional)
+
+### Manual Setup
+
+1. Create a PostgreSQL database:
+   ```sql
+   CREATE DATABASE question_db;
+   ```
+
+2. Configure the environment variables:
+   - Create a `.env` file in the root directory
+   - Create a `.env` file in the `bk/` directory
+
+   Root `.env` example:
+   ```
+   PORT=3000
+   CORS_ORIGINS=http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174
+   CORS_CREDENTIALS=true
+   DATABASE_URL=postgres://username:password@localhost:5432/question_db
+   ```
+
+   Backend `.env` example:
+   ```
+   DATABASE_URL=postgres://username:password@localhost:5432/question_db
+   JWT_SECRET=your_secret_key_here
+   NODE_ENV=development
+   ```
+
+3. Initialize the database schema:
+   ```bash
+   cd bk
+   node setup-db.js
+   ```
+
+4. Test the database connection:
+   ```bash
+   npm run check-db
+   ```
+
+## Quick Start
+
+### Install Dependencies
+
+```bash
+# Install root project dependencies
+npm install
+
+# Install all dependencies for frontend and backend
+npm run setup
+```
+
+### Run the Application
+
+You can run the application in several ways:
+
+```bash
+# Run the simplified root server
+npm run dev
+
+# Run the complete backend server
+npm run dev:backend
+
+# Run the frontend application
+npm run dev:frontend
+```
+
+For production:
+
+```bash
+# Run the production backend
+npm run start:backend
+
+# Run the frontend in production mode
+npm run start:frontend
+```
+
+## Backend API
+
+The backend provides a RESTful API for question management, authentication, and more. 
+See the `bk/README.md` file for more details on the API endpoints.
+
+## Frontend
+
+The frontend is a React application that provides a user interface for managing questions, 
+users, and curriculum. See the `fr/README.md` file for more details.
+
+## Contributing
+
+Feel free to contribute to this project by opening issues or pull requests.
 
 ## Features
 
@@ -15,12 +149,6 @@ A comprehensive question management system with frontend, backend, and PostgreSQ
 - Node.js (v16+)
 - PostgreSQL (v12+)
 - Git
-
-## Project Structure
-
-- `fr/` - Frontend React application (Vite)
-- `bk/` - Backend Express server
-- `setup-database.sql` - Database schema and initial data
 
 ## Setup Instructions
 

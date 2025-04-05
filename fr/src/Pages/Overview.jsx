@@ -397,22 +397,34 @@ const Overview = () => {
   const fetchActivity = useCallback(async () => {
     try {
       setIsActivityLoading(true);
-      const response = await axios.get(
-        `${API_BASE_URL}/api/activity/recent`,
-        { headers: getAuthHeader() }
-      );
       
-      // Handle different response formats
-      if (response.data) {
-        if (response.data.activities && Array.isArray(response.data.activities)) {
-          setRecentActivity(response.data.activities);
-        } else if (Array.isArray(response.data)) {
-          setRecentActivity(response.data);
+      try {
+        const response = await axios.get(
+          `${API_BASE_URL}/api/activity/recent`,
+          { headers: getAuthHeader() }
+        );
+        
+        // Handle different response formats
+        if (response.data) {
+          if (response.data.activities && Array.isArray(response.data.activities)) {
+            setRecentActivity(response.data.activities);
+          } else if (Array.isArray(response.data)) {
+            setRecentActivity(response.data);
+          } else {
+            // If we get back an empty or invalid response, set empty array
+            setRecentActivity([]);
+          }
+        } else {
+          setRecentActivity([]);
         }
+      } catch (error) {
+        console.error('Error fetching activity data:', error);
+        // Set empty array on error to avoid showing stale data
+        setRecentActivity([]);
+        
+        // Show a toast notification
+        toast.error('Could not load recent activity. Please try again later.');
       }
-    } catch (error) {
-      console.error('Error fetching activity data:', error);
-      // Don't set error state here to avoid disrupting the UI
     } finally {
       setIsActivityLoading(false);
     }

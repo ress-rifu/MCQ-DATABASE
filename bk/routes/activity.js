@@ -73,18 +73,61 @@ router.get('/recent', async (req, res) => {
     try {
         // Try to fetch from activity_log table if it exists
         try {
+            // Check if activity_log table exists before querying it
+            const tableExists = await pool.query(`
+                SELECT EXISTS (
+                    SELECT FROM pg_tables 
+                    WHERE schemaname = 'public' 
+                    AND tablename = 'activity_log'
+                );
+            `);
+            
+            if (!tableExists.rows[0].exists) {
+                // Table doesn't exist, return empty activities array
+                console.log('Activity_log table does not exist, returning empty activities array');
+                return res.json({ activities: [] });
+            }
+            
+            // Build the query dynamically based on which columns exist
+            // First check which columns exist
+            const columnQuery = await pool.query(`
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'activity_log'
+            `);
+            
+            const columns = columnQuery.rows.map(row => row.column_name);
+            console.log('Available columns in activity_log:', columns);
+            
+            // Build the column list for the SELECT statement
+            let selectColumns = `
+                a.id, 
+                a.action, 
+                a.entity_type, 
+                a.entity_id, 
+                a.details, 
+                a.created_at
+            `;
+            
+            // Add title and description if they exist, or use defaults
+            if (columns.includes('title')) {
+                selectColumns += `, a.title`;
+            } else {
+                selectColumns += `, NULL as title`;
+            }
+            
+            if (columns.includes('description')) {
+                selectColumns += `, a.description`;
+            } else {
+                selectColumns += `, NULL as description`;
+            }
+            
+            // Add user columns
+            selectColumns += `, u.name as user_name, u.email as user_email`;
+            
+            // Execute the query with the dynamically built column list
             const result = await pool.query(`
-                SELECT 
-                    a.id, 
-                    a.action, 
-                    a.entity_type, 
-                    a.entity_id, 
-                    a.details, 
-                    a.created_at,
-                    a.title,
-                    a.description,
-                    u.name as user_name,
-                    u.email as user_email
+                SELECT ${selectColumns}
                 FROM activity_log a
                 LEFT JOIN users u ON a.user_id = u.id
                 ORDER BY a.created_at DESC
@@ -110,54 +153,15 @@ router.get('/recent', async (req, res) => {
             
             return res.json({ activities });
         } catch (tableError) {
-            console.warn('Activity table may not exist, using fallback data:', tableError.message);
+            console.warn('Error fetching from activity table:', tableError.message);
             
-            // Check if questions table exists and return empty array if it doesn't
-            try {
-                // Fallback: If activity_log table doesn't exist, return recent questions instead
-                const recentQuestions = await pool.query(`
-                    SELECT 
-                        q.id,
-                        'question_created' as action,
-                        'question' as entity_type,
-                        q.id as entity_id,
-                        q.created_at,
-                        u.name as user_name,
-                        u.email as user_email
-                    FROM questions q
-                    LEFT JOIN users u ON q.created_by = u.id
-                    ORDER BY q.created_at DESC
-                    LIMIT 10
-                `);
-                
-                const activities = recentQuestions.rows.map(row => ({
-                    id: row.id,
-                    action: row.action,
-                    entity_type: row.entity_type,
-                    entity_id: row.entity_id,
-                    created_at: row.created_at,
-                    title: `Question #${row.id}`,
-                    description: '',
-                    activity_type: 'create_question',
-                    user: {
-                        name: row.user_name || 'Unknown User',
-                        email: row.user_email
-                    },
-                    details: { question_id: row.id }
-                }));
-                
-                return res.json({ activities });
-            } catch (questionsTableError) {
-                console.warn('Questions table might not exist:', questionsTableError.message);
-                // Return empty activities if both tables don't exist
-                return res.json({ activities: [] });
-            }
+            // Return empty activities since there was an error
+            return res.json({ activities: [] });
         }
     } catch (error) {
         console.error('Error fetching recent activity:', error);
-        res.status(500).json({ 
-            message: 'Error fetching recent activity', 
-            error: error.message,
+        // Return empty activities array on error to avoid breaking the frontend
+        return res.status(200).json({ 
             activities: [] 
         });
     }
@@ -248,7 +252,8 @@ function formatActivityTitle(activity) {
             return `Edited question #${activity.entity_id || ''}`;
         default:
             // Replace all underscores, not just the first one
-            return `${activity.action.replace(/_/g, ' ')} #${activity.id || ''}`;
+            const actionText = activity.action.replace(/_/g, ' ');
+            return `${actionText} #${activity.id || ''}`;
     }
 }
 
