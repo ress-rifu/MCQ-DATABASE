@@ -921,7 +921,7 @@ const QuestionBank = () => {
 
         return (
             <div
-                className={`bg-white dark:bg-gray-800 rounded-md border ${
+                className={`bg-white dark:bg-gray-800 rounded-xl border ${
                     isSelected
                         ? 'border-blue-500 dark:border-blue-500'
                         : 'border-gray-200 dark:border-gray-700'
@@ -929,7 +929,7 @@ const QuestionBank = () => {
                 onClick={() => isBatchSelectionMode && !isStudent && onSelect(questionId)}
             >
                 {/* Header with Question ID chip */}
-                <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+                <div className="p-5 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex flex-wrap justify-between items-start">
                         {/* Left side - Subject and Class info */}
                         <div className="flex flex-col">
@@ -951,22 +951,22 @@ const QuestionBank = () => {
                                 </span>
 
                                 {question.chapter && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800/30">
                                         {question.chapter}
                                     </span>
                                 )}
                                 {question.topic && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/30">
                                         {question.topic}
                                     </span>
                                 )}
                                 {question.difficulty_level && (
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                                         ${question.difficulty_level.toLowerCase() === 'easy'
-                                            ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
+                                            ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-100 dark:border-green-800/30'
                                             : question.difficulty_level.toLowerCase() === 'medium'
-                                                ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400'
-                                                : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                                                ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 border border-yellow-100 dark:border-yellow-800/30'
+                                                : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800/30'
                                         }`}>
                                         {question.difficulty_level}
                                     </span>
@@ -1002,7 +1002,7 @@ const QuestionBank = () => {
                 {/* Question Content */}
                 <div className="p-5 flex-grow">
                     {/* Question Text and Image - Notion-like styling */}
-                    <div className="prose prose-sm dark:prose-invert max-w-none mb-6 p-3 bg-gray-50 dark:bg-gray-800/80 rounded-md border border-gray-100 dark:border-gray-700/50">
+                    <div className="prose prose-sm dark:prose-invert max-w-none mb-6 p-4 bg-gray-50 dark:bg-gray-800/80 rounded-lg border border-gray-100 dark:border-gray-700/50 shadow-sm">
                         <div className="text-base text-gray-900 dark:text-white font-medium">
                             <LaTeXRenderer content={getQuestionText(question)} />
                             {/* Direct fallback for question text if it fails to render */}
@@ -1024,7 +1024,7 @@ const QuestionBank = () => {
                         {['A', 'B', 'C', 'D'].map(option => (
                             <div
                                 key={`option-${questionId}-${option}`}
-                                className={`p-3 rounded-md border text-sm hover:shadow-sm transition-all duration-200 ${
+                                className={`p-3.5 rounded-lg border text-sm hover:shadow-sm transition-all duration-200 ${
                                     (question.correct_answer === option || question.answer === option)
                                         ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800/30 text-green-700 dark:text-green-400'
                                         : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'
@@ -1128,7 +1128,7 @@ const QuestionBank = () => {
 
                 {/* Actions - Bottom Buttons */}
                 {!isBatchSelectionMode && (
-                    <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between mt-auto">
+                    <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between mt-auto">
                         <div className="flex items-center gap-3">
                             {/* Action buttons - Only render for non-student users */}
                             {!isStudent && (
@@ -1138,7 +1138,7 @@ const QuestionBank = () => {
                                             e.stopPropagation();
                                             onEdit(question);
                                         }}
-                                        className="flex items-center gap-1 px-3 py-1.5 rounded-md bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/10 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium transition-colors border border-blue-200 dark:border-blue-800/30"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/10 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium transition-colors border border-blue-200 dark:border-blue-800/30 shadow-sm"
                                     >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1150,7 +1150,7 @@ const QuestionBank = () => {
                                             e.stopPropagation();
                                             onDelete(question.id || question._id);
                                         }}
-                                        className="flex items-center gap-1 px-3 py-1.5 rounded-md bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium transition-colors border border-red-200 dark:border-red-800/30"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium transition-colors border border-red-200 dark:border-red-800/30 shadow-sm"
                                     >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1162,7 +1162,7 @@ const QuestionBank = () => {
                                             e.stopPropagation();
                                             onAddToCollection(question);
                                         }}
-                                        className="flex items-center gap-1 px-3 py-1.5 rounded-md bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/10 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium transition-colors border border-blue-200 dark:border-blue-800/30"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/10 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium transition-colors border border-blue-200 dark:border-blue-800/30 shadow-sm"
                                     >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -1181,7 +1181,7 @@ const QuestionBank = () => {
                                                 e.stopPropagation();
                                                 handleRemoveQuestion(question);
                                             }}
-                                            className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium transition-colors"
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium transition-colors border border-red-200 dark:border-red-800/30 shadow-sm"
                                         >
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
@@ -1194,7 +1194,7 @@ const QuestionBank = () => {
                                                 e.stopPropagation();
                                                 handleSelectQuestion(question);
                                             }}
-                                            className="flex items-center gap-2 px-4 py-2 rounded-md bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/10 dark:hover:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-sm font-medium transition-colors"
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/10 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium transition-colors border border-blue-200 dark:border-blue-800/30 shadow-sm"
                                         >
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
@@ -1262,12 +1262,12 @@ const QuestionBank = () => {
 
     return (
         <div className="min-h-screen bg-white dark:bg-gray-900">
-            {/* Floating Header */}
-            <div className="sticky top-0 z-30 px-4 sm:px-6 max-w-7xl mx-auto bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 py-4">
+            {/* Floating Header - Untitled UI style */}
+            <div className="sticky top-0 z-30 px-4 sm:px-6 max-w-7xl mx-auto bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 py-5 shadow-sm">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Question Bank</h1>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Question Bank</h1>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">
                             {questions.length} Questions · {uniqueValues('subject').length} Subjects
                         </p>
                     </div>
@@ -1294,7 +1294,7 @@ const QuestionBank = () => {
                                     hint: '',
                                     reference: ''
                                 })}
-                                className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-1"
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-1.5 shadow-sm"
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1307,10 +1307,10 @@ const QuestionBank = () => {
                         {!isStudent && (
                             <button
                                 onClick={toggleBatchSelectionMode}
-                                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1 ${
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 shadow-sm ${
                                     isBatchSelectionMode
                                         ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
                                 }`}
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1323,7 +1323,7 @@ const QuestionBank = () => {
                         {/* My Collection button - Always available for all users */}
                         <button
                             onClick={() => navigate('/myquestion')}
-                            className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/30 rounded-md text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-1"
+                            className="px-4 py-2 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/30 rounded-lg text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-1.5 shadow-sm"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -1334,19 +1334,19 @@ const QuestionBank = () => {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-6">
-                {/* Non-sticky Filter Bar */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-6">
+                {/* Non-sticky Filter Bar - Untitled UI style */}
                 <div className="pb-6">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
                             {/* Class selection */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Class</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Class</label>
                                 <select
                                     name="class_id"
                                     value={filters.class_id}
                                     onChange={handleFilterChange}
-                                    className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm"
                                 >
                                     <option value="">All Classes</option>
                                     {classes.map(c => (
@@ -1357,12 +1357,12 @@ const QuestionBank = () => {
 
                             {/* Subject selection - only enable if class is selected */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Subject</label>
                                 <select
                                     name="subject_id"
                                     value={filters.subject_id}
                                     onChange={handleFilterChange}
-                                    className={`w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!filters.class_id ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                    className={`w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm ${!filters.class_id ? 'opacity-60 cursor-not-allowed' : ''}`}
                                     disabled={!filters.class_id}
                                 >
                                     <option value="">All Subjects</option>
@@ -1374,12 +1374,12 @@ const QuestionBank = () => {
 
                             {/* Chapter selection - only enable if subject is selected */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chapter</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Chapter</label>
                                 <select
                                     name="chapter_id"
                                     value={filters.chapter_id}
                                     onChange={handleFilterChange}
-                                    className={`w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!filters.subject_id ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                    className={`w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm ${!filters.subject_id ? 'opacity-60 cursor-not-allowed' : ''}`}
                                     disabled={!filters.subject_id}
                                 >
                                     <option value="">All Chapters</option>
@@ -1391,12 +1391,12 @@ const QuestionBank = () => {
 
                             {/* Topic filter */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Topic</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Topic</label>
                                 <select
                                     name="topic"
                                     value={filters.topic}
                                     onChange={handleFilterChange}
-                                    className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm"
                                 >
                                     <option value="">All Topics</option>
                                     {uniqueValues("topic").map((val, idx) => (
@@ -1407,12 +1407,12 @@ const QuestionBank = () => {
 
                             {/* Difficulty level filter */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Difficulty Level</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Difficulty Level</label>
                                 <select
                                     name="difficulty_level"
                                     value={filters.difficulty_level}
                                     onChange={handleFilterChange}
-                                    className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm"
                                 >
                                     <option value="">All Difficulty Levels</option>
                                     {uniqueValues("difficulty_level").map((val, idx) => (
@@ -1423,12 +1423,12 @@ const QuestionBank = () => {
 
                             {/* Reference filter */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reference</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Reference</label>
                                 <select
                                     name="reference"
                                     value={filters.reference}
                                     onChange={handleFilterChange}
-                                    className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm"
                                 >
                                     <option value="">All References</option>
                                     {uniqueValues("reference").map((val, idx) => (
@@ -1437,10 +1437,10 @@ const QuestionBank = () => {
                                 </select>
                             </div>
                         </div>
-                        <div className="mt-4 flex justify-end">
+                        <div className="mt-6 flex justify-end">
                             <button
                                 onClick={clearFilters}
-                                className="px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                                className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors border border-blue-200 dark:border-blue-800/30 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/10 shadow-sm"
                             >
                                 Clear Filters
                             </button>
@@ -1450,7 +1450,7 @@ const QuestionBank = () => {
 
                 {/* Batch Selection Bar */}
                 {isBatchSelectionMode && (
-                    <div className="bg-blue-50 dark:bg-blue-900/10 rounded-md border border-blue-100 dark:border-blue-800/20 p-4 mb-6 shadow-sm">
+                    <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800/20 p-5 mb-6 shadow-sm">
                         <div className="flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
                                 <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
@@ -1459,14 +1459,14 @@ const QuestionBank = () => {
 
                                 <button
                                     onClick={selectAllQuestions}
-                                    className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                                    className="px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors border border-blue-200 dark:border-blue-800/30 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/20"
                                 >
                                     Select All
                                 </button>
 
                                 <button
                                     onClick={clearSelection}
-                                    className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                                    className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors border border-gray-200 dark:border-gray-700 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
                                 >
                                     Clear
                                 </button>
@@ -1476,7 +1476,7 @@ const QuestionBank = () => {
                                 <button
                                     onClick={addBatchToCollection}
                                     disabled={batchSelectedIds.length === 0}
-                                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm ${
                                         batchSelectedIds.length === 0
                                             ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
                                             : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -1488,7 +1488,7 @@ const QuestionBank = () => {
                                 <button
                                     onClick={openBatchDeleteModal}
                                     disabled={batchSelectedIds.length === 0}
-                                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm ${
                                         batchSelectedIds.length === 0
                                             ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
                                             : 'bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/30 hover:bg-red-100 dark:hover:bg-red-900/20'
@@ -1501,19 +1501,30 @@ const QuestionBank = () => {
                     </div>
                 )}
 
-                {/* Questions Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Questions Grid - Untitled UI style */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {loading ? (
-                        <div className="col-span-full flex justify-center items-center py-12">
-                            <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="col-span-full flex justify-center items-center py-16">
+                            <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                         </div>
                     ) : error ? (
-                        <div className="col-span-full bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded-lg p-6 text-center">
-                            <p className="text-red-600 dark:text-red-400">{error}</p>
+                        <div className="col-span-full bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded-xl p-8 text-center shadow-sm">
+                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 mb-4">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <p className="text-red-600 dark:text-red-400 font-medium">{error}</p>
                         </div>
                     ) : filteredQuestions.length === 0 ? (
-                        <div className="col-span-full bg-gray-50 dark:bg-gray-800/50 rounded-lg p-8 text-center">
-                            <p className="text-gray-500 dark:text-gray-400">No questions found. Try adjusting your filters.</p>
+                        <div className="col-span-full bg-gray-50 dark:bg-gray-800/50 rounded-xl p-10 text-center shadow-sm border border-gray-200 dark:border-gray-700">
+                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 mb-4">
+                                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No questions found</h3>
+                            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">Try adjusting your filters or create a new question to get started.</p>
                         </div>
                     ) : (
                         getPaginatedQuestions().map(question => (
@@ -1539,7 +1550,7 @@ const QuestionBank = () => {
                         pageSize={pageSize}
                         onPageChange={setCurrentPage}
                         onPageSizeChange={setPageSize}
-                        className="mt-6 bg-white dark:bg-gray-800 p-4 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm"
+                        className="mt-8 bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm"
                     />
                 )}
             </div>

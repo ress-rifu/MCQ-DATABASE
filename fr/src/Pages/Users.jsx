@@ -18,7 +18,7 @@ const Users = () => {
     password: "",
     role: "teacher"
   });
-  
+
   // Notification system
   const [notification, setNotification] = useState({ show: false, type: "", message: "" });
 
@@ -36,7 +36,8 @@ const Users = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      
+      setError(null);
+
       // Get the token and make the request
       const res = await axios.get(`${API_BASE_URL}/api/users`, {
         headers: getAuthHeader()
@@ -50,11 +51,16 @@ const Users = () => {
         setError('Cannot connect to the server. Please check if the backend is running.');
       } else if (err.response && err.response.status === 401) {
         setError('Authentication required. Please log in again.');
+      } else if (err.response && err.response.status === 403) {
+        setError('Access denied. You do not have permission to view users.');
+      } else if (err.response && err.response.status === 500) {
+        setError('Server error. Please try again later or contact support.');
       } else {
         setError("Failed to fetch users: " + (err.message || "Unknown error"));
       }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleChange = (e) => {
@@ -71,7 +77,7 @@ const Users = () => {
       const response = await axios.post(`${API_BASE_URL}/api/users`, formData, {
         headers: getAuthHeader()
       });
-      
+
       setUsers([...users, response.data]);
       setShowAddModal(false);
       setFormData({ name: "", email: "", password: "", role: "teacher" });
@@ -102,16 +108,16 @@ const Users = () => {
         email: formData.email,
         role: formData.role
       };
-      
+
       // Only include password if it was entered
       if (formData.password) {
         dataToUpdate.password = formData.password;
       }
-      
+
       const response = await axios.put(`${API_BASE_URL}/api/users/${currentUser.id}`, dataToUpdate, {
         headers: getAuthHeader()
       });
-      
+
       // Update users list with the updated user
       setUsers(users.map(u => u.id === currentUser.id ? response.data : u));
       setShowEditModal(false);
@@ -132,7 +138,7 @@ const Users = () => {
       await axios.delete(`${API_BASE_URL}/api/users/${currentUser.id}`, {
         headers: getAuthHeader()
       });
-      
+
       // Remove the deleted user from the state
       setUsers(users.filter(u => u.id !== currentUser.id));
       setShowDeleteModal(false);
@@ -156,8 +162,8 @@ const Users = () => {
                   {users.length} Users in the system
                 </p>
               </div>
-              
-              <button 
+
+              <button
                 onClick={() => {
                   setFormData({ name: "", email: "", password: "", role: "teacher" });
                   setShowAddModal(true);
@@ -212,8 +218,8 @@ const Users = () => {
                         <td className="px-5 py-3.5">{user.email}</td>
                         <td className="px-5 py-3.5">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            user.role === "admin" 
-                              ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400" 
+                            user.role === "admin"
+                              ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400"
                               : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
                           }`}>
                             {user.role}
@@ -221,13 +227,13 @@ const Users = () => {
                         </td>
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-2">
-                            <button 
+                            <button
                               onClick={() => handleEditClick(user)}
                               className="px-3 py-1 text-xs bg-white hover:bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600 text-blue-600 dark:text-blue-400 rounded-md font-medium transition-all duration-200 border border-gray-200 dark:border-gray-600 shadow-sm"
                             >
                               Edit
                             </button>
-                            <button 
+                            <button
                               onClick={() => handleDeleteClick(user)}
                               className="px-3 py-1 text-xs bg-white hover:bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600 text-red-600 dark:text-red-400 rounded-md font-medium transition-all duration-200 border border-gray-200 dark:border-gray-600 shadow-sm"
                               disabled={user.role === "admin" && users.filter(u => u.role === "admin").length === 1}
@@ -247,7 +253,7 @@ const Users = () => {
       </div>
 
       {/* Add User Modal */}
-      <Modal 
+      <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         title="Add New User"
@@ -268,7 +274,7 @@ const Users = () => {
                 className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-300"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Email
@@ -282,7 +288,7 @@ const Users = () => {
                 className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-300"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Password
@@ -296,7 +302,7 @@ const Users = () => {
                 className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-300"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Role
@@ -313,7 +319,7 @@ const Users = () => {
               </select>
             </div>
           </div>
-          
+
           <ModalActions>
             <SecondaryButton type="button" onClick={() => setShowAddModal(false)}>
               Cancel
@@ -348,7 +354,7 @@ const Users = () => {
                   className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-300"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Email
@@ -362,7 +368,7 @@ const Users = () => {
                   className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-300"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Password <span className="text-gray-400 dark:text-gray-500 text-xs">(Leave blank to keep current password)</span>
@@ -375,7 +381,7 @@ const Users = () => {
                   className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-300"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Role
@@ -396,7 +402,7 @@ const Users = () => {
                 )}
               </div>
             </div>
-            
+
             <ModalActions>
               <SecondaryButton type="button" onClick={() => setShowEditModal(false)}>
                 Cancel
@@ -426,7 +432,7 @@ const Users = () => {
                 This action cannot be undone.
               </p>
             </div>
-            
+
             <ModalActions>
               <SecondaryButton onClick={() => setShowDeleteModal(false)}>
                 Cancel
@@ -443,8 +449,8 @@ const Users = () => {
       {notification.show && (
         <div className="fixed bottom-4 right-4 z-[9999] animate-fade-in-up">
           <div className={`px-6 py-3 rounded-md shadow-xl flex items-center ${
-            notification.type === 'error' 
-              ? 'bg-red-600 text-white' 
+            notification.type === 'error'
+              ? 'bg-red-600 text-white'
               : 'bg-green-600 text-white'
           }`}>
             <span className="mr-2">

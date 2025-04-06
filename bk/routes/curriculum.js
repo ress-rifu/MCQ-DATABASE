@@ -25,9 +25,38 @@ const excelStorage = multer.diskStorage({
     }
 });
 
-const excelUpload = multer({ 
+const excelUpload = multer({
     storage: excelStorage,
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
+// Get curriculum count (total number of curriculum items)
+router.get('/count', async (req, res) => {
+    try {
+        // Count classes, subjects, and chapters
+        const [classesResult, subjectsResult, chaptersResult] = await Promise.all([
+            pool.query('SELECT COUNT(*) FROM classes'),
+            pool.query('SELECT COUNT(*) FROM subjects'),
+            pool.query('SELECT COUNT(*) FROM chapters')
+        ]);
+
+        const classesCount = parseInt(classesResult.rows[0].count) || 0;
+        const subjectsCount = parseInt(subjectsResult.rows[0].count) || 0;
+        const chaptersCount = parseInt(chaptersResult.rows[0].count) || 0;
+
+        // Total curriculum items (classes + subjects + chapters)
+        const totalCount = classesCount + subjectsCount + chaptersCount;
+
+        res.json({
+            count: totalCount,
+            classes: classesCount,
+            subjects: subjectsCount,
+            chapters: chaptersCount
+        });
+    } catch (err) {
+        console.error('Error counting curriculum items:', err);
+        res.status(500).json({ message: 'Failed to count curriculum items', count: 0 });
+    }
 });
 
 // Get all classes
@@ -46,7 +75,7 @@ router.post('/classes', authenticateToken, async (req, res) => {
     try {
         console.log('POST /classes request received with user:', req.user);
         console.log('Request body:', req.body);
-        
+
         const { name } = req.body;
         if (!name) {
             console.log('POST /classes failed: Class name is required');
@@ -81,7 +110,7 @@ router.put('/classes/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { name } = req.body;
-        
+
         if (!name) {
             return res.status(400).json({ message: 'Class name is required' });
         }
@@ -110,7 +139,7 @@ router.delete('/classes/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const result = await pool.query('DELETE FROM classes WHERE id = $1 RETURNING *', [id]);
-        
+
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Class not found' });
         }
@@ -154,7 +183,7 @@ router.get('/subjects', async (req, res) => {
 router.post('/subjects', authenticateToken, async (req, res) => {
     try {
         const { name, class_id } = req.body;
-        
+
         if (!name || !class_id) {
             return res.status(400).json({ message: 'Subject name and class ID are required' });
         }
@@ -169,7 +198,7 @@ router.post('/subjects', authenticateToken, async (req, res) => {
             'INSERT INTO subjects (name, class_id) VALUES ($1, $2) RETURNING *',
             [name, class_id]
         );
-        
+
         // Get class name for response
         const className = classCheck.rows[0].name;
         const subject = result.rows[0];
@@ -190,7 +219,7 @@ router.put('/subjects/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { name, class_id } = req.body;
-        
+
         if (!name || !class_id) {
             return res.status(400).json({ message: 'Subject name and class ID are required' });
         }
@@ -229,7 +258,7 @@ router.delete('/subjects/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const result = await pool.query('DELETE FROM subjects WHERE id = $1 RETURNING *', [id]);
-        
+
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Subject not found' });
         }
@@ -246,10 +275,10 @@ router.get('/subjects/:subjectId/chapters', async (req, res) => {
     try {
         const { subjectId } = req.params;
         const result = await pool.query(
-            `SELECT ch.*, s.name as subject_name, c.name as class_name 
-             FROM chapters ch 
-             JOIN subjects s ON ch.subject_id = s.id 
-             JOIN classes c ON s.class_id = c.id 
+            `SELECT ch.*, s.name as subject_name, c.name as class_name
+             FROM chapters ch
+             JOIN subjects s ON ch.subject_id = s.id
+             JOIN classes c ON s.class_id = c.id
              WHERE ch.subject_id = $1 ORDER BY ch.name`,
             [subjectId]
         );
@@ -264,10 +293,10 @@ router.get('/subjects/:subjectId/chapters', async (req, res) => {
 router.get('/chapters', async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT ch.*, s.name as subject_name, c.name as class_name 
-             FROM chapters ch 
-             JOIN subjects s ON ch.subject_id = s.id 
-             JOIN classes c ON s.class_id = c.id 
+            `SELECT ch.*, s.name as subject_name, c.name as class_name
+             FROM chapters ch
+             JOIN subjects s ON ch.subject_id = s.id
+             JOIN classes c ON s.class_id = c.id
              ORDER BY c.name, s.name, ch.name`
         );
         res.json(result.rows);
@@ -281,20 +310,20 @@ router.get('/chapters', async (req, res) => {
 router.post('/chapters', authenticateToken, async (req, res) => {
     try {
         const { name, subject_id } = req.body;
-        
+
         if (!name || !subject_id) {
             return res.status(400).json({ message: 'Chapter name and subject ID are required' });
         }
 
         // Check if subject exists and get related class
         const subjectCheck = await pool.query(
-            `SELECT s.*, c.name as class_name 
-             FROM subjects s 
-             JOIN classes c ON s.class_id = c.id 
-             WHERE s.id = $1`, 
+            `SELECT s.*, c.name as class_name
+             FROM subjects s
+             JOIN classes c ON s.class_id = c.id
+             WHERE s.id = $1`,
             [subject_id]
         );
-        
+
         if (subjectCheck.rows.length === 0) {
             return res.status(404).json({ message: 'Subject not found' });
         }
@@ -303,7 +332,7 @@ router.post('/chapters', authenticateToken, async (req, res) => {
             'INSERT INTO chapters (name, subject_id) VALUES ($1, $2) RETURNING *',
             [name, subject_id]
         );
-        
+
         // Prepare response with related info
         const chapter = result.rows[0];
         chapter.subject_name = subjectCheck.rows[0].name;
@@ -324,20 +353,20 @@ router.put('/chapters/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { name, subject_id } = req.body;
-        
+
         if (!name || !subject_id) {
             return res.status(400).json({ message: 'Chapter name and subject ID are required' });
         }
 
         // Check if subject exists and get related class
         const subjectCheck = await pool.query(
-            `SELECT s.*, c.name as class_name 
-             FROM subjects s 
-             JOIN classes c ON s.class_id = c.id 
-             WHERE s.id = $1`, 
+            `SELECT s.*, c.name as class_name
+             FROM subjects s
+             JOIN classes c ON s.class_id = c.id
+             WHERE s.id = $1`,
             [subject_id]
         );
-        
+
         if (subjectCheck.rows.length === 0) {
             return res.status(404).json({ message: 'Subject not found' });
         }
@@ -371,7 +400,7 @@ router.delete('/chapters/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const result = await pool.query('DELETE FROM chapters WHERE id = $1 RETURNING *', [id]);
-        
+
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Chapter not found' });
         }
@@ -387,15 +416,15 @@ router.delete('/chapters/:id', authenticateToken, async (req, res) => {
 router.get('/chapters/:chapterId/topics', async (req, res) => {
     try {
         const { chapterId } = req.params;
-        
+
         // Check if chapter exists
         const chapterCheck = await pool.query('SELECT * FROM chapters WHERE id = $1', [chapterId]);
         if (chapterCheck.rows.length === 0) {
             return res.status(404).json({ message: 'Chapter not found' });
         }
-        
+
         const result = await pool.query(
-            `SELECT t.*, ch.name as chapter_name, s.name as subject_name, c.name as class_name 
+            `SELECT t.*, ch.name as chapter_name, s.name as subject_name, c.name as class_name
              FROM topics t
              JOIN chapters ch ON t.chapter_id = ch.id
              JOIN subjects s ON ch.subject_id = s.id
@@ -404,7 +433,7 @@ router.get('/chapters/:chapterId/topics', async (req, res) => {
              ORDER BY t.name`,
             [chapterId]
         );
-        
+
         res.json(result.rows);
     } catch (err) {
         console.error('Error fetching topics:', err);
@@ -416,14 +445,14 @@ router.get('/chapters/:chapterId/topics', async (req, res) => {
 router.get('/topics', async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT t.*, ch.name as chapter_name, s.name as subject_name, c.name as class_name 
+            `SELECT t.*, ch.name as chapter_name, s.name as subject_name, c.name as class_name
              FROM topics t
              JOIN chapters ch ON t.chapter_id = ch.id
              JOIN subjects s ON ch.subject_id = s.id
              JOIN classes c ON s.class_id = c.id
              ORDER BY c.name, s.name, ch.name, t.name`
         );
-        
+
         res.json(result.rows);
     } catch (err) {
         console.error('Error fetching all topics:', err);
@@ -435,21 +464,21 @@ router.get('/topics', async (req, res) => {
 router.post('/topics', authenticateToken, async (req, res) => {
     try {
         const { name, chapter_id, description } = req.body;
-        
+
         if (!name || !chapter_id) {
             return res.status(400).json({ message: 'Topic name and chapter ID are required' });
         }
 
         // Check if chapter exists and get related info
         const chapterCheck = await pool.query(
-            `SELECT ch.*, s.name as subject_name, c.name as class_name 
-             FROM chapters ch 
-             JOIN subjects s ON ch.subject_id = s.id 
-             JOIN classes c ON s.class_id = c.id 
-             WHERE ch.id = $1`, 
+            `SELECT ch.*, s.name as subject_name, c.name as class_name
+             FROM chapters ch
+             JOIN subjects s ON ch.subject_id = s.id
+             JOIN classes c ON s.class_id = c.id
+             WHERE ch.id = $1`,
             [chapter_id]
         );
-        
+
         if (chapterCheck.rows.length === 0) {
             return res.status(404).json({ message: 'Chapter not found' });
         }
@@ -458,7 +487,7 @@ router.post('/topics', authenticateToken, async (req, res) => {
             'INSERT INTO topics (name, chapter_id, description) VALUES ($1, $2, $3) RETURNING *',
             [name, chapter_id, description || null]
         );
-        
+
         // Prepare response with related info
         const topic = result.rows[0];
         topic.chapter_name = chapterCheck.rows[0].name;
@@ -480,21 +509,21 @@ router.put('/topics/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { name, chapter_id, description } = req.body;
-        
+
         if (!name || !chapter_id) {
             return res.status(400).json({ message: 'Topic name and chapter ID are required' });
         }
 
         // Check if chapter exists and get related info
         const chapterCheck = await pool.query(
-            `SELECT ch.*, s.name as subject_name, c.name as class_name 
-             FROM chapters ch 
-             JOIN subjects s ON ch.subject_id = s.id 
-             JOIN classes c ON s.class_id = c.id 
-             WHERE ch.id = $1`, 
+            `SELECT ch.*, s.name as subject_name, c.name as class_name
+             FROM chapters ch
+             JOIN subjects s ON ch.subject_id = s.id
+             JOIN classes c ON s.class_id = c.id
+             WHERE ch.id = $1`,
             [chapter_id]
         );
-        
+
         if (chapterCheck.rows.length === 0) {
             return res.status(404).json({ message: 'Chapter not found' });
         }
@@ -529,7 +558,7 @@ router.delete('/topics/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const result = await pool.query('DELETE FROM topics WHERE id = $1 RETURNING *', [id]);
-        
+
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Topic not found' });
         }
@@ -544,18 +573,18 @@ router.delete('/topics/:id', authenticateToken, async (req, res) => {
 // Bulk upload chapters from Excel file
 router.post('/bulk-upload-chapters', authenticateToken, excelUpload.single('file'), async (req, res) => {
     const client = await pool.connect();
-    
+
     try {
         console.log('Bulk upload request received:');
         console.log('- Body:', req.body);
         console.log('- File:', req.file ? `${req.file.originalname} (${req.file.size} bytes)` : 'No file');
         console.log('- User:', req.user);
-        
+
         if (!req.file) {
             console.log('Error: No file uploaded');
             return res.status(400).json({ message: 'No file uploaded' });
         }
-        
+
         if (!req.body.sheetName) {
             console.log('Error: No sheet name provided');
             return res.status(400).json({ message: 'Sheet name is required' });
@@ -565,49 +594,49 @@ router.post('/bulk-upload-chapters', authenticateToken, excelUpload.single('file
             console.log('Error: Missing classId or subjectId', { classId: req.body.classId, subjectId: req.body.subjectId });
             return res.status(400).json({ message: 'Class ID and Subject ID are required' });
         }
-        
+
         const classId = req.body.classId;
         const subjectId = req.body.subjectId;
         console.log(`Processing upload for Class ID: ${classId}, Subject ID: ${subjectId}`);
-        
+
         // Verify class and subject exist and match
         console.log('Verifying class and subject relationship...');
         const subjectCheck = await client.query(
             'SELECT s.*, c.name as class_name FROM subjects s JOIN classes c ON s.class_id = c.id WHERE s.id = $1 AND c.id = $2',
             [subjectId, classId]
         );
-        
+
         if (subjectCheck.rows.length === 0) {
             console.log('Error: Subject not found or does not belong to class', { subjectId, classId });
             return res.status(404).json({ message: 'Subject not found or does not belong to the specified class' });
         }
-        
+
         console.log('Subject verification successful:', subjectCheck.rows[0]);
-        
+
         // Read the Excel file
         console.log(`Reading Excel file from path: ${req.file.path}`);
         const workbook = xlsx.readFile(req.file.path);
         console.log(`Excel file read successfully. Available sheets: ${workbook.SheetNames.join(', ')}`);
-        
+
         const sheetName = req.body.sheetName;
-        
+
         if (!workbook.SheetNames.includes(sheetName)) {
             console.log(`Error: Sheet "${sheetName}" not found in workbook`);
             return res.status(400).json({ message: 'Sheet not found in workbook' });
         }
-        
+
         const sheet = workbook.Sheets[sheetName];
-        
+
         // Parse the data
         console.log('Parsing Excel sheet data...');
         let data = [];
-        
+
         // Try standard parsing first (expects objects with properties)
-        const standardData = xlsx.utils.sheet_to_json(sheet, { 
+        const standardData = xlsx.utils.sheet_to_json(sheet, {
             raw: false,
             defval: ""
         });
-        
+
         console.log(`Standard parsing found ${standardData.length} rows of data`);
         if (standardData.length > 0) {
             console.log('First row sample:', standardData[0]);
@@ -615,17 +644,17 @@ router.post('/bulk-upload-chapters', authenticateToken, excelUpload.single('file
         } else {
             // Try array-based parsing (rows of values)
             console.log('Standard parsing yielded no data, trying array-based parsing...');
-            const arrayData = xlsx.utils.sheet_to_json(sheet, { 
+            const arrayData = xlsx.utils.sheet_to_json(sheet, {
                 header: 1,
                 raw: false,
                 defval: ""
             });
-            
+
             if (arrayData.length >= 2 && arrayData[0].length > 0) {
                 // Use first row as headers
                 const headers = arrayData[0];
                 console.log('Array parsing headers:', headers);
-                
+
                 // Convert remaining rows to objects
                 data = arrayData.slice(1).map(row => {
                     const obj = {};
@@ -642,16 +671,16 @@ router.post('/bulk-upload-chapters', authenticateToken, excelUpload.single('file
                 }
             }
         }
-        
+
         if (data.length === 0) {
             console.log('Error: No data found in sheet');
             return res.status(400).json({ message: 'No data found in sheet' });
         }
-        
+
         // Start a transaction
         console.log('Starting database transaction...');
         await client.query('BEGIN');
-        
+
         // Process each chapter
         const results = {
             total: data.length,
@@ -659,38 +688,38 @@ router.post('/bulk-upload-chapters', authenticateToken, excelUpload.single('file
             duplicates: 0,
             errors: []
         };
-        
+
         console.log(`Processing ${data.length} chapters...`);
         for (const item of data) {
             // Get chapter name from various possible column names
             const chapterName = item.chapter || item.Chapter || item.name || item.Name || item.CHAPTER || item.CHAPTER_NAME || '';
-            
+
             if (!chapterName) {
                 console.log('Skipping row due to missing chapter name:', item);
                 results.errors.push({ item, error: 'Missing chapter name' });
                 continue;
             }
-            
+
             try {
                 // Check if chapter already exists
                 const existingCheck = await client.query(
                     'SELECT * FROM chapters WHERE LOWER(name) = LOWER($1) AND subject_id = $2',
                     [chapterName.trim(), subjectId]
                 );
-                
+
                 if (existingCheck.rows.length > 0) {
                     console.log(`Chapter already exists: "${chapterName}"`);
                     results.duplicates++;
                     continue;
                 }
-                
+
                 // Insert the chapter
                 console.log(`Inserting chapter: "${chapterName}" for subject ${subjectId}`);
                 const insertResult = await client.query(
                     'INSERT INTO chapters (name, subject_id) VALUES ($1, $2) RETURNING id',
                     [chapterName.trim(), subjectId]
                 );
-                
+
                 console.log(`Successfully inserted chapter with id: ${insertResult.rows[0].id}`);
                 results.inserted++;
             } catch (err) {
@@ -698,15 +727,15 @@ router.post('/bulk-upload-chapters', authenticateToken, excelUpload.single('file
                 results.errors.push({ item, error: err.message });
             }
         }
-        
+
         // Commit the transaction
         console.log('Committing transaction...');
         await client.query('COMMIT');
-        
+
         // Clean up the file
         console.log('Cleaning up uploaded file...');
         fs.unlinkSync(req.file.path);
-        
+
         // Return the results
         console.log('Upload completed successfully:', results);
         res.status(200).json({
@@ -719,12 +748,12 @@ router.post('/bulk-upload-chapters', authenticateToken, excelUpload.single('file
         // Rollback in case of error
         console.error('Error in bulk upload process:', error);
         await client.query('ROLLBACK');
-        
+
         // Clean up file if it exists
         if (req.file && fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
         }
-        
+
         res.status(500).json({ message: 'Error importing chapters', error: error.message });
     } finally {
         client.release();
@@ -746,14 +775,14 @@ router.post('/topics/bulk-upload', authenticateToken, excelUpload.single('file')
 
         // Check if chapter exists and get related info
         const chapterCheck = await pool.query(
-            `SELECT ch.*, s.name as subject_name, c.name as class_name 
-             FROM chapters ch 
-             JOIN subjects s ON ch.subject_id = s.id 
-             JOIN classes c ON s.class_id = c.id 
-             WHERE ch.id = $1`, 
+            `SELECT ch.*, s.name as subject_name, c.name as class_name
+             FROM chapters ch
+             JOIN subjects s ON ch.subject_id = s.id
+             JOIN classes c ON s.class_id = c.id
+             WHERE ch.id = $1`,
             [chapterId]
         );
-        
+
         if (chapterCheck.rows.length === 0) {
             return res.status(404).json({ message: 'Chapter not found' });
         }
@@ -779,18 +808,18 @@ router.post('/topics/bulk-upload', authenticateToken, excelUpload.single('file')
                     'SELECT * FROM topics WHERE name = $1 AND chapter_id = $2',
                     [row.Name, chapterId]
                 );
-                
+
                 if (topicCheck.rows.length > 0) {
                     duplicates++;
                     continue;
                 }
-                
+
                 // Insert topic
                 await pool.query(
                     'INSERT INTO topics (name, chapter_id, description) VALUES ($1, $2, $3)',
                     [row.Name, chapterId, row.Description || null]
                 );
-                
+
                 inserted++;
             } catch (err) {
                 console.error('Error processing row:', err, row);
@@ -807,12 +836,12 @@ router.post('/topics/bulk-upload', authenticateToken, excelUpload.single('file')
         });
     } catch (err) {
         console.error('Error processing topics upload:', err);
-        
+
         // Clean up temp file if it exists
         if (req.file && req.file.path) {
             fs.unlinkSync(req.file.path);
         }
-        
+
         res.status(500).json({ message: 'Failed to process topics upload', error: err.message });
     }
 });
@@ -825,13 +854,13 @@ router.get('/count', async (req, res) => {
     const subjectsResult = await pool.query('SELECT COUNT(*) FROM subjects');
     const chaptersResult = await pool.query('SELECT COUNT(*) FROM chapters');
     const topicsResult = await pool.query('SELECT COUNT(*) FROM topics');
-    
-    const totalCount = 
-      parseInt(classesResult.rows[0].count) + 
-      parseInt(subjectsResult.rows[0].count) + 
+
+    const totalCount =
+      parseInt(classesResult.rows[0].count) +
+      parseInt(subjectsResult.rows[0].count) +
       parseInt(chaptersResult.rows[0].count) +
       parseInt(topicsResult.rows[0].count);
-    
+
     res.json({ count: totalCount });
   } catch (error) {
     console.error('Error counting curriculum items:', error);
@@ -839,4 +868,4 @@ router.get('/count', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

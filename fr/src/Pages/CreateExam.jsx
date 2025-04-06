@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { API_URL, getAuthHeader } from '../apiConfig';
+import { API_BASE_URL, getAuthHeader } from '../apiConfig';
 import axios from 'axios';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -34,6 +34,7 @@ const CreateExam = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditing = !!id;
+  const [user, setUser] = useState(null);
 
   // Exam form state
   const [formData, setFormData] = useState({
@@ -112,15 +113,29 @@ const CreateExam = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
 
-  // Add user state
-  const [user, setUser] = useState(null);
+  // Load user data
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+
+      // Redirect students away from this page
+      if (parsedUser.role === 'student') {
+        toast.error('Students cannot create or edit exams');
+        navigate('/exams');
+      }
+    } else {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   // Fetch exam data if editing
   useEffect(() => {
     const fetchExamData = async () => {
       if (isEditing) {
         try {
-          const response = await axios.get(`${API_URL}/api/exams/${id}`, {
+          const response = await axios.get(`${API_BASE_URL}/api/exams/${id}`, {
             headers: getAuthHeader()
           });
 
@@ -157,16 +172,16 @@ const CreateExam = () => {
     const fetchCurriculumData = async () => {
       try {
         const [coursesRes, classesRes, subjectsRes, chaptersRes] = await Promise.all([
-          axios.get(`${API_URL}/api/courses`, {
+          axios.get(`${API_BASE_URL}/api/courses`, {
             headers: getAuthHeader()
           }),
-          axios.get(`${API_URL}/api/curriculum/classes`, {
+          axios.get(`${API_BASE_URL}/api/curriculum/classes`, {
             headers: getAuthHeader()
           }),
-          axios.get(`${API_URL}/api/curriculum/subjects`, {
+          axios.get(`${API_BASE_URL}/api/curriculum/subjects`, {
             headers: getAuthHeader()
           }),
-          axios.get(`${API_URL}/api/curriculum/chapters`, {
+          axios.get(`${API_BASE_URL}/api/curriculum/chapters`, {
             headers: getAuthHeader()
           })
         ]);
@@ -189,7 +204,7 @@ const CreateExam = () => {
     if (formData.course_id && courses.length > 0) {
       const fetchCourseContent = async () => {
         try {
-          const response = await axios.get(`${API_URL}/api/courses/${formData.course_id}/content`, {
+          const response = await axios.get(`${API_BASE_URL}/api/courses/${formData.course_id}/content`, {
             headers: getAuthHeader()
           });
 
@@ -249,7 +264,7 @@ const CreateExam = () => {
         if (formData.subject_id) params.subject_id = formData.subject_id;
         if (formData.chapter_id) params.chapter_id = formData.chapter_id;
 
-        const response = await axios.get(`${API_URL}/api/questions`, {
+        const response = await axios.get(`${API_BASE_URL}/api/questions`, {
           headers: getAuthHeader(),
           params
         });
@@ -364,10 +379,12 @@ const CreateExam = () => {
   // Submit form
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+    console.log('Submitting exam form...');
 
     // Validation
     if (!formData.title) {
       toast.error('Exam title is required');
+      setActiveTab('details');
       return;
     }
 
@@ -379,55 +396,78 @@ const CreateExam = () => {
 
     if (formData.chapters.length === 0) {
       toast.error('Please select at least one chapter for the exam');
+      setActiveTab('details');
+      return;
+    }
+
+    if (!formData.course_id) {
+      toast.error('Please select a course for the exam');
+      setActiveTab('details');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
+      // Prepare the payload
       const payload = {
         ...formData,
         negative_percentage: formData.negative_marking ? formData.negative_percentage : 0,
-        questions: selectedQuestions
+        questions: selectedQuestions.map(q => ({
+          id: q.id,
+          marks: q.marks || 1
+        }))
       };
+
+      console.log('Sending payload to API:', payload);
+      console.log('API URL:', `${API_BASE_URL}/api/exams${isEditing ? `/${id}` : ''}`);
 
       let response;
 
       if (isEditing) {
-        response = await axios.put(`${API_URL}/api/exams/${id}`, payload, {
+        response = await axios.put(`${API_BASE_URL}/api/exams/${id}`, payload, {
           headers: getAuthHeader()
         });
+        console.log('Update response:', response.data);
         toast.success('Exam updated successfully!');
       } else {
-        response = await axios.post(`${API_URL}/api/exams`, payload, {
+        response = await axios.post(`${API_BASE_URL}/api/exams`, payload, {
           headers: getAuthHeader()
         });
+        console.log('Create response:', response.data);
         toast.success('Exam created successfully!');
       }
 
+      // Navigate to exams list after successful save
       navigate('/exams');
     } catch (error) {
       console.error('Error saving exam:', error);
-      toast.error(error.response?.data?.message || 'Failed to save exam');
+
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+
+        if (error.response.status === 401) {
+          toast.error('Authentication error. Please log in again.');
+        } else if (error.response.status === 403) {
+          toast.error('You do not have permission to create or edit exams.');
+        } else {
+          toast.error(error.response.data?.message || 'Failed to save exam');
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error('Error request:', error.request);
+        toast.error('No response from server. Please check your connection.');
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        toast.error('Error: ' + error.message);
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  // Add effect to check user role and redirect if student
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
-
-      // Redirect students away from this page
-      if (parsedUser.role === 'student') {
-        toast.error('Students cannot create or edit exams');
-        navigate('/exams');
-      }
-    }
-  }, [navigate]);
 
   // Handle class selection change
   const handleClassChange = (e) => {

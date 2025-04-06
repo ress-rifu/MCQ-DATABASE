@@ -15,6 +15,30 @@ const canAccessRoute = (user, allowedRoles) => {
   return allowedRoles.includes(user.role);
 };
 
+// Get exam count
+router.get('/count', authMiddleware, async (req, res) => {
+  try {
+    // Count total exams
+    const result = await pool.query('SELECT COUNT(*) FROM exams');
+    const count = parseInt(result.rows[0].count) || 0;
+
+    // Get additional stats if needed
+    const activeExamsResult = await pool.query(
+      "SELECT COUNT(*) FROM exams WHERE end_datetime > NOW()"
+    );
+    const activeExams = parseInt(activeExamsResult.rows[0].count) || 0;
+
+    // Return the count and additional stats
+    res.json({
+      count,
+      activeExams
+    });
+  } catch (error) {
+    console.error('Error counting exams:', error);
+    res.status(500).json({ message: 'Failed to count exams', count: 0 });
+  }
+});
+
 // Get all exams
 router.get('/', authMiddleware, async (req, res) => {
   try {

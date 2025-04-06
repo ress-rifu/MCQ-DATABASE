@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { API_URL, getAuthHeader } from '../apiConfig';
+import { API_BASE_URL, getAuthHeader } from '../apiConfig';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import Pagination from '../Components/Pagination';
@@ -51,7 +51,7 @@ const ExamsList = () => {
         const params = { ...filters };
         Object.keys(params).forEach(key => !params[key] && delete params[key]);
 
-        const response = await axios.get(`${API_URL}/api/exams`, {
+        const response = await axios.get(`${API_BASE_URL}/api/exams`, {
           headers: getAuthHeader(),
           params
         });
@@ -73,7 +73,7 @@ const ExamsList = () => {
     const fetchCurriculumData = async () => {
       try {
         const [classesRes, subjectsRes, chaptersRes] = await Promise.all([
-          axios.get(`${API_URL}/api/curriculum/classes`, {
+          axios.get(`${API_BASE_URL}/api/curriculum/classes`, {
             headers: getAuthHeader()
           }),
           axios.get(`${API_URL}/api/curriculum/subjects`, {

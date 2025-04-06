@@ -6,6 +6,37 @@
 /* Set system default fonts */
 html, body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Global responsive styles */
+.responsive-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Make all tables responsive */
+table {
+  width: 100%;
+  display: table;
+  border-collapse: separate;
+  text-indent: 0;
+  border-color: inherit;
+  border-spacing: 0;
+}
+
+/* Table container for horizontal scrolling */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Responsive images */
+img {
+  max-width: 100%;
+  height: auto;
 }
 
 @custom-variant dark (&:where([data-theme=forest], [data-theme=forest] *));
@@ -92,7 +123,7 @@ html, body {
   line-height: 1.5;
 }
 
-.simple-latex-table td, 
+.simple-latex-table td,
 .simple-latex-table th {
   border: 1px solid #e5e7eb;
   padding: 0.625rem;
@@ -120,7 +151,7 @@ html, body {
   max-width: 100%;
 }
 
-.longtable-container td, 
+.longtable-container td,
 .longtable-container th {
   padding: 0.5rem 1rem;
   text-align: center;

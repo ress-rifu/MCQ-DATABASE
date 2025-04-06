@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL, getAuthHeader } from "../apiConfig";
+import testApiEndpoints from "../testApi";
 import {
   FaUsers,
   FaBook,
@@ -30,62 +31,138 @@ import { useAuth } from "../hooks/useAuth.jsx";
 import useAxiosWithErrorHandling from "../hooks/useAxiosWithErrorHandling.jsx";
 import { toast } from "react-hot-toast";
 
-// Dashboard card component with Notion/Untitled UI style
+// Create a context for the display mode
+const DisplayModeContext = createContext({ displayMode: "grid" });
+
+// Dashboard card component with Untitled UI style
 const DashboardCard = ({ icon, title, description, path }) => {
+  const { displayMode } = useContext(DisplayModeContext) || { displayMode: "grid" };
+
+  // List view style
+  if (displayMode === "list") {
+    return (
+      <Link
+        to={path}
+        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden p-4 flex items-center group"
+      >
+        <div className="flex-shrink-0 bg-blue-50 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors mr-4">
+          {icon}
+        </div>
+        <div className="flex-grow min-w-0">
+          <h3 className="text-base font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{title}</h3>
+          <p className="text-gray-500 dark:text-gray-400 text-sm truncate">{description}</p>
+        </div>
+        <div className="flex-shrink-0 ml-4 text-sm font-medium text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
+          <span className="hidden sm:inline">Get started</span>
+          <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+        </div>
+      </Link>
+    );
+  }
+
+  // Grid view style (default)
   return (
     <Link
       to={path}
-      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden p-5 flex flex-col h-full"
+      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden p-6 flex flex-col h-full group"
     >
       <div className="flex items-start mb-4">
-        <div className="flex-shrink-0 bg-blue-50 dark:bg-blue-900/30 p-3 rounded-md text-blue-600 dark:text-blue-400">
+        <div className="flex-shrink-0 bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors">
           {icon}
         </div>
       </div>
-      <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">{title}</h3>
+      <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{title}</h3>
       <p className="text-gray-500 dark:text-gray-400 text-sm flex-grow">{description}</p>
+      <div className="mt-4 text-sm font-medium text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
+        <span>Get started</span>
+        <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+      </div>
     </Link>
   );
 };
 
-// Stats card component with Notion/Untitled UI style
+// Stats card component with Untitled UI style
 const StatsCard = ({ icon, label, value, isLoading, color }) => {
   // Define color classes
   const getColorClasses = (colorName) => {
     switch(colorName) {
       case 'blue':
-        return { bg: "bg-blue-50 dark:bg-blue-900/20", text: "text-blue-600 dark:text-blue-400" };
+        return {
+          bg: "bg-blue-50 dark:bg-blue-900/20",
+          text: "text-blue-600 dark:text-blue-400",
+          border: "border-blue-100 dark:border-blue-800/30",
+          hover: "hover:bg-blue-100 dark:hover:bg-blue-800/30"
+        };
       case 'green':
-        return { bg: "bg-green-50 dark:bg-green-900/20", text: "text-green-600 dark:text-green-400" };
+        return {
+          bg: "bg-green-50 dark:bg-green-900/20",
+          text: "text-green-600 dark:text-green-400",
+          border: "border-green-100 dark:border-green-800/30",
+          hover: "hover:bg-green-100 dark:hover:bg-green-800/30"
+        };
       case 'yellow':
-        return { bg: "bg-yellow-50 dark:bg-yellow-900/20", text: "text-yellow-600 dark:text-yellow-400" };
+        return {
+          bg: "bg-yellow-50 dark:bg-yellow-900/20",
+          text: "text-yellow-600 dark:text-yellow-400",
+          border: "border-yellow-100 dark:border-yellow-800/30",
+          hover: "hover:bg-yellow-100 dark:hover:bg-yellow-800/30"
+        };
       case 'indigo':
-        return { bg: "bg-indigo-50 dark:bg-indigo-900/20", text: "text-indigo-600 dark:text-indigo-400" };
+        return {
+          bg: "bg-indigo-50 dark:bg-indigo-900/20",
+          text: "text-indigo-600 dark:text-indigo-400",
+          border: "border-indigo-100 dark:border-indigo-800/30",
+          hover: "hover:bg-indigo-100 dark:hover:bg-indigo-800/30"
+        };
       case 'purple':
-        return { bg: "bg-purple-50 dark:bg-purple-900/20", text: "text-purple-600 dark:text-purple-400" };
+        return {
+          bg: "bg-purple-50 dark:bg-purple-900/20",
+          text: "text-purple-600 dark:text-purple-400",
+          border: "border-purple-100 dark:border-purple-800/30",
+          hover: "hover:bg-purple-100 dark:hover:bg-purple-800/30"
+        };
       case 'red':
-        return { bg: "bg-red-50 dark:bg-red-900/20", text: "text-red-600 dark:text-red-400" };
+        return {
+          bg: "bg-red-50 dark:bg-red-900/20",
+          text: "text-red-600 dark:text-red-400",
+          border: "border-red-100 dark:border-red-800/30",
+          hover: "hover:bg-red-100 dark:hover:bg-red-800/30"
+        };
       case 'orange':
-        return { bg: "bg-orange-50 dark:bg-orange-900/20", text: "text-orange-600 dark:text-orange-400" };
+        return {
+          bg: "bg-orange-50 dark:bg-orange-900/20",
+          text: "text-orange-600 dark:text-orange-400",
+          border: "border-orange-100 dark:border-orange-800/30",
+          hover: "hover:bg-orange-100 dark:hover:bg-orange-800/30"
+        };
       default:
-        return { bg: "bg-gray-100 dark:bg-gray-800", text: "text-gray-700 dark:text-gray-300" };
+        return {
+          bg: "bg-gray-100 dark:bg-gray-800",
+          text: "text-gray-700 dark:text-gray-300",
+          border: "border-gray-200 dark:border-gray-700",
+          hover: "hover:bg-gray-200 dark:hover:bg-gray-700"
+        };
     }
   };
 
-  const { bg, text } = getColorClasses(color);
+  const { bg, text, border, hover } = getColorClasses(color);
 
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm">
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-sm transition-all duration-200 hover:shadow-md">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-gray-500 dark:text-gray-400 text-xs mb-2 font-medium uppercase tracking-wide">{label}</p>
           {isLoading ? (
-            <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-7 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
           ) : (
-            <h4 className="text-xl font-medium text-gray-900 dark:text-white">{value}</h4>
+            <h4 className="text-2xl font-semibold text-gray-900 dark:text-white">{value}</h4>
           )}
         </div>
-        <div className={`p-3 rounded-md ${bg} ${text}`}>
+        <div className={`p-3 rounded-lg ${bg} ${text} ${border} transition-colors ${hover}`}>
           {icon}
         </div>
       </div>
@@ -150,28 +227,50 @@ const ActivityItem = ({ activity, onRefresh }) => {
   // Format timestamp
   const timestamp = formatActivityTime(activity.created_at);
 
+  // Get color classes based on activity type
+  const getActivityColorClasses = (colorName) => {
+    switch(colorName) {
+      case 'blue':
+        return 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-100 dark:border-blue-800/30';
+      case 'green':
+        return 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 border border-green-100 dark:border-green-800/30';
+      case 'red':
+        return 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 border border-red-100 dark:border-red-800/30';
+      case 'yellow':
+        return 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 border border-yellow-100 dark:border-yellow-800/30';
+      case 'purple':
+        return 'bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400 border border-purple-100 dark:border-purple-800/30';
+      case 'indigo':
+        return 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/30';
+      default:
+        return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700';
+    }
+  };
+
   return (
-    <div className="flex items-start space-x-3 p-3 border-b border-gray-100 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-      {/* Icon */}
-      <div className={`p-2 rounded-md bg-${color}-50 dark:bg-${color}-900/20 text-${color}-600 dark:text-${color}-400 shrink-0`}>
+    <div className="flex items-start p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0">
+      <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mr-4 ${getActivityColorClasses(color)}`}>
         {icon}
       </div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 dark:text-white">
-          {activity.title || 'Activity'}
-        </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          {activity.description || 'No description available'}
-        </p>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-          {timestamp}
-        </p>
+      <div className="flex-grow min-w-0">
+        <div className="flex items-start justify-between">
+          <div>
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
+              {activity.title || 'Activity'}
+            </h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {timestamp}
+            </p>
+            {activity.description && (
+              <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
+                {activity.description || 'No description available'}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-2 shrink-0">
+      <div className="ml-4 flex-shrink-0 flex space-x-2">
         {/* View button for various activity types */}
         {(activity.activity_type === 'import_questions' ||
           activity.activity_type === 'create_question' ||
@@ -183,10 +282,10 @@ const ActivityItem = ({ activity, onRefresh }) => {
                 questionId: activity.entity_id || null
               }
             })}
-            className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none transition-colors"
+            className="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 focus:outline-none transition-colors border border-blue-200 dark:border-blue-800/30"
             aria-label="View questions"
           >
-            <FiEye className="h-3 w-3 mr-1" />
+            <FiEye className="h-3.5 w-3.5 mr-1.5" />
             View
           </button>
         )}
@@ -196,11 +295,11 @@ const ActivityItem = ({ activity, onRefresh }) => {
           <button
             onClick={() => handleDeleteImport(activity.id)}
             disabled={deleteLoading}
-            className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none transition-colors border border-red-200 dark:border-red-800/30 disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Delete imported questions"
           >
             {deleteLoading ? (
-              <svg className="animate-spin h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin h-3.5 w-3.5 mr-1.5" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
@@ -407,6 +506,10 @@ const Overview = () => {
   // Fetch admin/teacher dashboard data
   const fetchAdminData = async () => {
     try {
+      // Run API test to debug
+      console.log('Running API test...');
+      await testApiEndpoints();
+
       // Set loading states
       setIsActivityLoading(true);
       setStats(prev => ({
@@ -422,28 +525,55 @@ const Overview = () => {
       }));
 
       // Create an array of promises for parallel API calls
-      const [
-        questionsData,
-        curriculumData,
-        usersData,
-        activityData,
-        examsData,
-        coursesData
-      ] = await Promise.all([
-        safeApiCall('/api/questions/stats', {
+      console.log('Making API calls with headers:', getAuthHeader());
+
+      // Direct API calls for debugging
+      const questionsStatsResponse = await axios.get(`${API_BASE_URL}/api/questions/stats`).catch(err => {
+        console.error('Error fetching questions stats:', err);
+        return { data: {
           totalQuestions: 0,
           totalSubjects: 0,
           totalChapters: 0,
           totalTopics: 0,
           monthlyUploads: 0,
           userUploads: 0
-        }),
-        safeApiCall('/api/curriculum/count', { count: 0 }),
-        user?.role === 'admin' ? safeApiCall('/api/users/count') : Promise.resolve({ count: '-' }),
-        safeApiCall('/api/activity/recent', { activities: [] }),
-        safeApiCall('/api/exams/count', { count: 0 }),
-        safeApiCall('/api/courses/count', { count: 0 })
-      ]);
+        }};
+      });
+
+      const curriculumCountResponse = await axios.get(`${API_BASE_URL}/api/curriculum/count`).catch(err => {
+        console.error('Error fetching curriculum count:', err);
+        return { data: { count: 0 } };
+      });
+
+      const usersCountResponse = user?.role === 'admin' ?
+        await axios.get(`${API_BASE_URL}/api/users/count`).catch(err => {
+          console.error('Error fetching users count:', err);
+          return { data: { count: 0 } };
+        }) :
+        { data: { count: '-' } };
+
+      const activityResponse = await axios.get(`${API_BASE_URL}/api/activity/recent`).catch(err => {
+        console.error('Error fetching activity:', err);
+        return { data: { activities: [] } };
+      });
+
+      const examsCountResponse = await axios.get(`${API_BASE_URL}/api/exams/count`).catch(err => {
+        console.error('Error fetching exams count:', err);
+        return { data: { count: 0 } };
+      });
+
+      const coursesCountResponse = await axios.get(`${API_BASE_URL}/api/courses/count`).catch(err => {
+        console.error('Error fetching courses count:', err);
+        return { data: { count: 0 } };
+      });
+
+      // Extract data from responses
+      const questionsData = questionsStatsResponse.data;
+      const curriculumData = curriculumCountResponse.data;
+      const usersData = usersCountResponse.data;
+      const activityData = activityResponse.data;
+      const examsData = examsCountResponse.data;
+      const coursesData = coursesCountResponse.data;
 
       console.log('All API responses:', {
         questionsData,
@@ -635,24 +765,25 @@ const Overview = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto bg-white dark:bg-gray-900">
-      {/* Header section with greeting and quick stats - Notion/Untitled UI style */}
-      <div className="mb-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+    <DisplayModeContext.Provider value={{ displayMode }}>
+      <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto bg-white dark:bg-gray-900 overflow-hidden">
+      {/* Header section with greeting and quick stats - Untitled UI style */}
+      <div className="mb-10">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1">
+            <h1 className="text-3xl font-semibold text-gray-900 dark:text-white mb-2">
               {getCurrentTimeGreeting()}, {user?.name || "User"}
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-base text-gray-500 dark:text-gray-400">
               {isStudent
                 ? "Welcome to your Performance Dashboard"
                 : "Welcome to your Question Database Dashboard"}
             </p>
           </div>
-          <div className="flex items-center space-x-1 mt-4 md:mt-0 border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+          <div className="flex items-center space-x-1 mt-4 md:mt-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm">
             <button
               onClick={() => setDisplayMode("grid")}
-              className={`p-2 ${displayMode === "grid" ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50"}`}
+              className={`p-2.5 ${displayMode === "grid" ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50"} transition-colors`}
               title="Grid view"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -661,7 +792,7 @@ const Overview = () => {
             </button>
             <button
               onClick={() => setDisplayMode("list")}
-              className={`p-2 ${displayMode === "list" ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50"}`}
+              className={`p-2.5 ${displayMode === "list" ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50"} transition-colors`}
               title="List view"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -674,10 +805,10 @@ const Overview = () => {
         {/* Display API error message if needed */}
         {apiErrorOccurred && <ApiErrorMessage />}
 
-        {/* Quick statistics - Show different stats for students vs. teachers/admins */}
+        {/* Quick statistics - Untitled UI style */}
         {isStudent ? (
           /* Student Stats */
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-5 mb-8">
+          <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-10 overflow-x-auto">
             <StatsCard
               icon={<FaGraduationCap className="w-5 h-5" />}
               label="Total Exams"
@@ -709,7 +840,7 @@ const Overview = () => {
           </div>
         ) : (
           /* Admin/Teacher Stats */
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-5 mb-8">
+          <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-10 overflow-x-auto">
             <StatsCard
               icon={<FaQuestionCircle className="w-5 h-5" />}
               label="Questions"
@@ -774,9 +905,9 @@ const Overview = () => {
 
       {/* Main dashboard section with feature cards for non-students */}
       {!isStudent && (
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Feature cards */}
-          <div className={`lg:flex-1 ${displayMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" : "space-y-5"}`}>
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 overflow-hidden">
+          {/* Feature cards - Untitled UI style */}
+          <div className={`lg:flex-1 ${displayMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6" : "space-y-4 sm:space-y-6"}`}>
             <DashboardCard
               icon={<FaQuestionCircle className="h-5 w-5" />}
               title="Question Bank"
@@ -824,42 +955,45 @@ const Overview = () => {
             )}
           </div>
 
-          {/* Recent activity sidebar - Notion/Untitled UI style */}
-          <div className="lg:w-80 xl:w-96 shrink-0">
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden">
-              <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white">Recent Activity</h3>
+          {/* Recent activity sidebar - Untitled UI style */}
+          <div className="w-full lg:w-80 xl:w-96 shrink-0 mt-6 lg:mt-0">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
+              <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Recent Activity</h3>
                 <button
                   onClick={fetchActivity}
-                  className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+                  className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors"
                   title="Refresh"
                 >
                   <FaClock className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
+              <div className="max-h-[400px] sm:max-h-[500px] md:max-h-[600px] overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
                 {isActivityLoading ? (
                   // Activity loading state
-                  <div className="p-4 space-y-4">
+                  <div className="p-6 space-y-6">
                     {[1, 2, 3].map(i => (
-                      <div key={i} className="flex items-start space-x-3">
-                        <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse"></div>
+                      <div key={i} className="flex items-start space-x-4">
+                        <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
                         <div className="flex-1">
-                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2 animate-pulse"></div>
-                          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2 animate-pulse"></div>
-                          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 animate-pulse"></div>
+                          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-md w-3/4 mb-3 animate-pulse"></div>
+                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-md w-full mb-3 animate-pulse"></div>
+                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-md w-1/2 animate-pulse"></div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : recentActivity.length === 0 ? (
                   // Empty state
-                  <div className="p-4">
-                    <EmptyState
-                      message="No recent activity to display"
-                      icon={<FaClock className="h-6 w-6" />}
-                    />
+                  <div className="p-8 flex flex-col items-center justify-center text-center">
+                    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4 text-gray-400 dark:text-gray-500">
+                      <FaClock className="h-8 w-8" />
+                    </div>
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">No recent activity</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs">
+                      Your recent actions will appear here as you use the system.
+                    </p>
                   </div>
                 ) : (
                   // Activity items
@@ -876,21 +1010,21 @@ const Overview = () => {
               </div>
 
               {!isActivityLoading && (
-                <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
                   <div className="flex justify-between items-center">
                     {recentActivity.length > 0 && (
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Showing {recentActivity.length} activities
+                        Showing {recentActivity.length} {recentActivity.length === 1 ? 'activity' : 'activities'}
                       </span>
                     )}
                     <button
                       onClick={fetchActivity}
-                      className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors flex items-center ml-auto"
+                      className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors flex items-center ml-auto px-2.5 py-1.5 rounded-md border border-blue-200 dark:border-blue-800/30 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                     >
-                      <span>Refresh activity</span>
-                      <svg className="ml-1 w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="mr-1.5 w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                       </svg>
+                      <span>Refresh activity</span>
                     </button>
                   </div>
                 </div>
@@ -900,9 +1034,9 @@ const Overview = () => {
         </div>
       )}
 
-      {/* Student dashboard - Exam results section - Notion/Untitled UI style */}
+      {/* Student dashboard - Exam results section - Untitled UI style */}
       {isStudent && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6 overflow-hidden">
           {/* Recent Exams for Students */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
@@ -919,7 +1053,7 @@ const Overview = () => {
                 </div>
               </div>
             ) : examResults.length > 0 ? (
-              <div className="overflow-x-auto">
+              <div className="table-container -mx-4 sm:mx-0 sm:rounded-lg">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
@@ -1034,7 +1168,7 @@ const Overview = () => {
           </div>
 
           {/* Quick Actions for Students */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <DashboardCard
               icon={<FaBook className="h-5 w-5" />}
               title="Practice Questions"
@@ -1058,7 +1192,8 @@ const Overview = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </DisplayModeContext.Provider>
   );
 };
 

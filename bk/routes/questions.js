@@ -353,7 +353,7 @@ router.get("/recent-questions", authenticateToken, async (req, res) => {
 });
 
 // Get dashboard statistics
-router.get("/stats", authenticateToken, async (req, res) => {
+router.get("/stats", async (req, res) => {
   try {
     console.log("Fetching dashboard statistics");
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { API_URL, getAuthHeader } from '../apiConfig';
+import { API_BASE_URL, getAuthHeader } from '../apiConfig';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import io from 'socket.io-client';
@@ -9,7 +9,7 @@ import LaTeXRenderer from '../components/LaTeXRenderer';
 const ExamPortal = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   // State
   const [exam, setExam] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -23,7 +23,7 @@ const ExamPortal = () => {
   const [user, setUser] = useState(null);
   const [socket, setSocket] = useState(null);
   const [connectionError, setConnectionError] = useState(false);
-  
+
   // Get user data from localStorage
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -32,35 +32,35 @@ const ExamPortal = () => {
       setUser(parsedUser);
     }
   }, []);
-  
+
   // Connect to socket for real-time updates
   useEffect(() => {
     if (examStarted && !socket) {
       try {
-        const newSocket = io(API_URL, {
+        const newSocket = io(API_BASE_URL, {
           query: { examId: id },
           transports: ['websocket', 'polling'],
           timeout: 10000
         });
-        
+
         newSocket.on('connect', () => {
           console.log('Socket connected successfully');
         });
-        
+
         newSocket.on('connect_error', (err) => {
           console.error('Socket connection error:', err);
           setConnectionError(true);
         });
-        
+
         newSocket.on('questionUpdate', (updatedQuestion) => {
-          setQuestions(prev => prev.map(q => 
+          setQuestions(prev => prev.map(q =>
             q.id === updatedQuestion.id ? updatedQuestion : q
           ));
           toast.info('A question has been updated!');
         });
-        
+
         setSocket(newSocket);
-        
+
         return () => {
           if (newSocket) newSocket.disconnect();
         };
@@ -70,22 +70,22 @@ const ExamPortal = () => {
       }
     }
   }, [examStarted, id, socket]);
-  
+
   // Fetch exam details
   useEffect(() => {
     const fetchExam = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/exams/${id}`, {
+        const response = await axios.get(`${API_BASE_URL}/api/exams/${id}`, {
           headers: getAuthHeader()
         });
-        
+
         setExam(response.data);
-        
+
         // Check if exam is active
         const now = new Date();
         const startDate = new Date(response.data.start_datetime);
         const endDate = new Date(response.data.end_datetime);
-        
+
         if (now < startDate) {
           toast.error('This exam has not started yet');
           navigate('/exams');
@@ -93,17 +93,17 @@ const ExamPortal = () => {
           toast.error('This exam has ended');
           navigate('/exams');
         }
-        
+
         // Check if user has an attempt already
-        const attemptResponse = await axios.get(`${API_URL}/api/exams/${id}/attempt`, {
+        const attemptResponse = await axios.get(`${API_BASE_URL}/api/exams/${id}/attempt`, {
           headers: getAuthHeader()
         });
-        
+
         if (attemptResponse.data) {
           // User has an attempt
           const attempt = attemptResponse.data;
           setAttemptId(attempt.id);
-          
+
           if (attempt.completed) {
             setExamFinished(true);
             setExamStarted(true);
@@ -111,14 +111,14 @@ const ExamPortal = () => {
             // Resume attempt
             setExamStarted(true);
             setQuestions(response.data.questions);
-            
+
             // Load responses
             const responsesObj = {};
             attempt.responses.forEach(resp => {
               responsesObj[resp.question_id] = resp.selected_option;
             });
             setResponses(responsesObj);
-            
+
             // Calculate time remaining
             const endTime = new Date(attempt.start_time);
             endTime.setMinutes(endTime.getMinutes() + response.data.duration_minutes);
@@ -129,7 +129,7 @@ const ExamPortal = () => {
           // No attempt yet, show questions but don't start timer
           setQuestions(response.data.questions);
         }
-        
+
         setLoading(false);
       } catch (error) {
         console.error('Error fetching exam:', error);
@@ -137,10 +137,10 @@ const ExamPortal = () => {
         navigate('/exams');
       }
     };
-    
+
     fetchExam();
   }, [id, navigate]);
-  
+
   // Timer logic
   useEffect(() => {
     if (examStarted && !examFinished && timeRemaining !== null) {
@@ -154,31 +154,31 @@ const ExamPortal = () => {
           return prev - 1;
         });
       }, 1000);
-      
+
       return () => clearInterval(interval);
     }
   }, [examStarted, examFinished, timeRemaining]);
-  
+
   // Start the exam
   const startExam = async () => {
     try {
-      const response = await axios.post(`${API_URL}/api/exams/${id}/start`, {}, {
+      const response = await axios.post(`${API_BASE_URL}/api/exams/${id}/start`, {}, {
         headers: getAuthHeader()
       });
-      
+
       setAttemptId(response.data.id);
       setExamStarted(true);
-      
+
       // Start timer
       setTimeRemaining(exam.duration_minutes * 60);
-      
+
       toast.success('Exam started!');
     } catch (error) {
       console.error('Error starting exam:', error);
       toast.error('Failed to start exam: ' + (error.response?.data?.message || error.message));
     }
   };
-  
+
   // Handle answer selection
   const handleAnswerSelect = async (questionId, option) => {
     // Update local state
@@ -186,10 +186,10 @@ const ExamPortal = () => {
       ...prev,
       [questionId]: option
     }));
-    
+
     // Send to server
     try {
-      await axios.post(`${API_URL}/api/exams/${id}/response`, {
+      await axios.post(`${API_BASE_URL}/api/exams/${id}/response`, {
         attempt_id: attemptId,
         question_id: questionId,
         selected_option: option
@@ -198,7 +198,7 @@ const ExamPortal = () => {
       });
     } catch (error) {
       console.error('Error saving response:', error);
-      
+
       // Revert local state update if server save failed
       setResponses(prev => {
         const newResponses = { ...prev };
@@ -207,11 +207,11 @@ const ExamPortal = () => {
         }
         return newResponses;
       });
-      
+
       toast.error('Failed to save your answer: ' + (error.response?.data?.message || error.message));
     }
   };
-  
+
   // Navigation between questions
   const navigateQuestion = (direction) => {
     if (direction === 'next' && currentQuestionIndex < questions.length - 1) {
@@ -222,22 +222,22 @@ const ExamPortal = () => {
       setCurrentQuestionIndex(direction);
     }
   };
-  
+
   // Submit the exam
   const submitExam = useCallback(async () => {
     if (!examStarted || examFinished) return;
-    
+
     try {
       setLoading(true);
-      await axios.post(`${API_URL}/api/exams/${id}/submit`, {
+      await axios.post(`${API_BASE_URL}/api/exams/${id}/submit`, {
         attempt_id: attemptId
       }, {
         headers: getAuthHeader()
       });
-      
+
       setExamFinished(true);
       toast.success('Exam submitted successfully!');
-      
+
       // Redirect to results page
       navigate(`/exams/${id}/leaderboard`);
     } catch (error) {
@@ -247,42 +247,42 @@ const ExamPortal = () => {
       setLoading(false);
     }
   }, [examStarted, examFinished, id, attemptId, navigate]);
-  
+
   // Format remaining time display
   const formatTime = (seconds) => {
     if (seconds === null) return '--:--:--';
-    
+
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     return [
       hours.toString().padStart(2, '0'),
       minutes.toString().padStart(2, '0'),
       secs.toString().padStart(2, '0')
     ].join(':');
   };
-  
+
   // This checks if the user should be able to take this exam
   const canAccessExam = () => {
     // Students should be able to take exams
     if (user?.role === 'student') {
       return true;
     }
-    
+
     // Teachers can view/take their own exams
     if (user?.role === 'teacher' && exam?.createdBy === user?._id) {
       return true;
     }
-    
+
     // Admins can access all exams
     if (user?.role === 'admin') {
       return true;
     }
-    
+
     return false;
   };
-  
+
   // Loading screen
   if (loading) {
     return (
@@ -294,7 +294,7 @@ const ExamPortal = () => {
       </div>
     );
   }
-  
+
   // Exam start screen
   if (!examStarted) {
     return (
@@ -307,36 +307,36 @@ const ExamPortal = () => {
               {exam?.subject_name && `${exam.subject_name}`}
             </p>
           </div>
-          
+
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-500 mb-1">Duration</p>
                 <p className="text-lg font-semibold">{exam?.duration_minutes} minutes</p>
               </div>
-              
+
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-500 mb-1">Questions</p>
                 <p className="text-lg font-semibold">{questions.length}</p>
               </div>
-              
+
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-500 mb-1">Total Marks</p>
                 <p className="text-lg font-semibold">{exam?.total_marks}</p>
               </div>
             </div>
-            
+
             {exam?.syllabus && (
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-2">Syllabus</h3>
-                <div 
+                <div
                   className="p-4 bg-gray-50 rounded-lg border border-gray-200"
                 >
                   <LaTeXRenderer content={exam.syllabus || ''} />
                 </div>
               </div>
             )}
-            
+
             <div className="mb-6">
               <h3 className="text-lg font-semibold mb-3">Instructions</h3>
               <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -392,7 +392,7 @@ const ExamPortal = () => {
                 </ul>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <button
                 onClick={() => navigate('/exams')}
@@ -400,7 +400,7 @@ const ExamPortal = () => {
               >
                 Back to Exams
               </button>
-              
+
               <button
                 onClick={startExam}
                 className="px-5 py-2.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center font-medium"
@@ -416,7 +416,7 @@ const ExamPortal = () => {
       </div>
     );
   }
-  
+
   // Exam finished screen
   if (examFinished) {
     return (
@@ -426,7 +426,7 @@ const ExamPortal = () => {
             <h1 className="text-2xl font-bold text-white">Exam Completed</h1>
             <p className="text-green-100 mt-1">Your responses have been submitted successfully</p>
           </div>
-          
+
           <div className="p-8 text-center">
             <div className="mb-8">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-20 w-20 text-green-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
@@ -435,7 +435,7 @@ const ExamPortal = () => {
               <h2 className="text-xl font-semibold mt-4">Thank you for completing the exam</h2>
               <p className="text-gray-600 mt-2">Your responses have been recorded and will be evaluated.</p>
             </div>
-            
+
             <div className="flex justify-center space-x-4">
               <button
                 onClick={() => navigate(`/exams/${id}/leaderboard`)}
@@ -446,7 +446,7 @@ const ExamPortal = () => {
                 </svg>
                 View Leaderboard
               </button>
-              
+
               <button
                 onClick={() => navigate('/exams')}
                 className="px-5 py-2.5 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors flex items-center"
@@ -462,11 +462,11 @@ const ExamPortal = () => {
       </div>
     );
   }
-  
+
   // Active exam screen
   const currentQuestion = questions[currentQuestionIndex];
   const timeIsLow = timeRemaining < 300; // Less than 5 minutes remaining
-  
+
   // Add this check in the rendering logic
   if (!canAccessExam()) {
     return (
@@ -476,8 +476,8 @@ const ExamPortal = () => {
           <p className="text-gray-700 dark:text-gray-300 mb-6">
             You do not have permission to access this exam.
           </p>
-          <Link 
-            to="/exams" 
+          <Link
+            to="/exams"
             className="px-5 py-2.5 bg-gradient-to-r from-indigo-600/90 to-indigo-700/90 text-white rounded-lg hover:from-indigo-700/90 hover:to-indigo-800/90 transition-colors inline-flex items-center shadow-sm"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -489,13 +489,13 @@ const ExamPortal = () => {
       </div>
     );
   }
-  
+
   return (
     <div className="max-w-6xl mx-auto px-5 py-6">
       {/* Header with time and navigation */}
       <div className="backdrop-blur-sm bg-white/10 dark:bg-gray-800/30 rounded-xl shadow-lg p-5 mb-5 flex flex-col sm:flex-row justify-between items-center border border-gray-200/30 dark:border-gray-700/30">
         <h1 className="text-xl font-bold text-gray-800 dark:text-white mb-4 sm:mb-0">{exam?.title}</h1>
-        
+
         <div className="flex items-center space-x-4">
           <div className={`px-5 py-2.5 rounded-xl border shadow-inner ${timeIsLow ? 'bg-red-50/30 border-red-200/30 text-red-800' : 'bg-gradient-to-br from-gray-50/10 to-gray-100/5 dark:from-gray-700/20 dark:to-gray-800/10 border-gray-200/30 dark:border-gray-700/30'}`}>
             <span className="font-medium mr-2">Time:</span>
@@ -503,7 +503,7 @@ const ExamPortal = () => {
               {formatTime(timeRemaining)}
             </span>
           </div>
-          
+
           <button
             onClick={() => {
               if (window.confirm("Are you sure you want to submit the exam? This action cannot be undone.")) {
@@ -519,7 +519,7 @@ const ExamPortal = () => {
           </button>
         </div>
       </div>
-      
+
       {/* Main content with question and answer options */}
       <div className="flex flex-col lg:flex-row gap-5">
         {/* Question panel */}
@@ -532,25 +532,25 @@ const ExamPortal = () => {
               Marks: {currentQuestion?.marks || 1}
             </span>
           </div>
-          
+
           <div className="p-6">
-            <div 
+            <div
               className="mb-8 text-lg text-gray-800 dark:text-gray-200"
             >
               <LaTeXRenderer content={currentQuestion?.ques || ''} />
             </div>
-            
+
             <div className="space-y-4 mb-8">
               {['A', 'B', 'C', 'D'].map((option) => {
                 const optionKey = `option_${option.toLowerCase()}`;
                 const isSelected = responses[currentQuestion?.id] === option;
                 const optionContent = currentQuestion?.[optionKey];
                 const canSelect = exam?.can_change_answer !== false || !responses[currentQuestion?.id];
-                
+
                 if (!optionContent) return null;
-                
+
                 return (
-                  <div 
+                  <div
                     key={option}
                     onClick={() => {
                       if (canSelect) {
@@ -558,20 +558,20 @@ const ExamPortal = () => {
                       }
                     }}
                     className={`p-5 rounded-xl border transition-all ${
-                      isSelected 
-                        ? 'bg-blue-50/30 dark:bg-blue-900/20 border-blue-300/50 dark:border-blue-700/50 shadow-sm' 
+                      isSelected
+                        ? 'bg-blue-50/30 dark:bg-blue-900/20 border-blue-300/50 dark:border-blue-700/50 shadow-sm'
                         : 'hover:bg-gray-50/20 dark:hover:bg-gray-800/20 border-gray-200/30 dark:border-gray-700/30'
                     } ${canSelect ? 'cursor-pointer' : 'cursor-default'}`}
                   >
                     <div className="flex">
                       <span className={`w-8 h-8 flex items-center justify-center rounded-lg mr-4 flex-shrink-0 ${
-                        isSelected 
-                          ? 'bg-gradient-to-r from-blue-600/90 to-blue-700/90 text-white shadow-sm' 
+                        isSelected
+                          ? 'bg-gradient-to-r from-blue-600/90 to-blue-700/90 text-white shadow-sm'
                           : 'bg-gradient-to-br from-gray-50/20 to-gray-100/10 dark:from-gray-700/30 dark:to-gray-800/20 text-gray-700 dark:text-gray-300 border border-gray-200/30 dark:border-gray-700/30 shadow-inner'
                       }`}>
                         {option}
                       </span>
-                      <div 
+                      <div
                         className="flex-1 text-gray-700 dark:text-gray-300"
                       >
                         <LaTeXRenderer content={optionContent || ''} />
@@ -581,13 +581,13 @@ const ExamPortal = () => {
                 );
               })}
             </div>
-            
+
             <div className="flex justify-between mt-8 border-t border-gray-200/30 dark:border-gray-700/30 pt-5">
               <button
                 onClick={() => navigateQuestion('prev')}
                 className={`px-5 py-2.5 flex items-center rounded-xl transition-colors ${
-                  currentQuestionIndex === 0 
-                    ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' 
+                  currentQuestionIndex === 0
+                    ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
                     : 'bg-gradient-to-br from-gray-50/20 to-gray-100/10 dark:from-gray-700/30 dark:to-gray-800/20 text-gray-700 dark:text-gray-300 hover:from-gray-100/20 hover:to-gray-200/10 dark:hover:from-gray-600/30 dark:hover:to-gray-700/20 border border-gray-200/30 dark:border-gray-700/30 shadow-sm'
                 }`}
                 disabled={currentQuestionIndex === 0}
@@ -597,12 +597,12 @@ const ExamPortal = () => {
                 </svg>
                 Previous
               </button>
-              
+
               <button
                 onClick={() => navigateQuestion('next')}
                 className={`px-5 py-2.5 flex items-center rounded-xl transition-colors ${
-                  currentQuestionIndex === questions.length - 1 
-                    ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' 
+                  currentQuestionIndex === questions.length - 1
+                    ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
                     : 'bg-gradient-to-r from-blue-600/90 to-blue-700/90 text-white hover:from-blue-700/90 hover:to-blue-800/90 shadow-sm'
                 }`}
                 disabled={currentQuestionIndex === questions.length - 1}
@@ -615,29 +615,29 @@ const ExamPortal = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Question navigation panel */}
         <div className="lg:w-80 backdrop-blur-sm bg-white/10 dark:bg-gray-800/30 rounded-xl shadow-lg overflow-hidden border border-gray-200/30 dark:border-gray-700/30">
           <div className="bg-gradient-to-r from-gray-50/30 to-gray-100/20 dark:from-gray-700/30 dark:to-gray-800/20 px-5 py-4 border-b border-gray-200/30 dark:border-gray-700/30">
             <h3 className="font-medium text-gray-800 dark:text-white">Navigation</h3>
           </div>
-          
+
           <div className="p-5">
             <div className="grid grid-cols-5 gap-3">
               {questions.map((q, index) => {
                 let bgColor = 'bg-gradient-to-br from-gray-50/20 to-gray-100/10 dark:from-gray-700/30 dark:to-gray-800/20 border border-gray-200/30 dark:border-gray-700/30 shadow-inner';
                 let textColor = 'text-gray-700 dark:text-gray-300';
-                
+
                 if (responses[q.id]) {
                   bgColor = 'bg-gradient-to-r from-green-600/90 to-green-700/90 shadow-sm';
                   textColor = 'text-white';
                 }
-                
+
                 if (index === currentQuestionIndex) {
                   bgColor = 'bg-gradient-to-r from-blue-600/90 to-blue-700/90 shadow-sm';
                   textColor = 'text-white';
                 }
-                
+
                 return (
                   <button
                     key={q.id}
@@ -649,7 +649,7 @@ const ExamPortal = () => {
                 );
               })}
             </div>
-            
+
             <div className="mt-7 border-t border-gray-200/30 dark:border-gray-700/30 pt-5">
               <div className="flex items-center justify-between text-sm mb-4">
                 <div className="flex items-center">
@@ -666,7 +666,7 @@ const ExamPortal = () => {
                 <span className="text-gray-600 dark:text-gray-400">Current Question</span>
               </div>
             </div>
-            
+
             <div className="mt-7 bg-gradient-to-br from-gray-50/10 to-gray-100/5 dark:from-gray-700/20 dark:to-gray-800/10 p-5 rounded-xl border border-gray-200/30 dark:border-gray-700/30 shadow-inner">
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -677,7 +677,7 @@ const ExamPortal = () => {
                 </p>
               </div>
               <div className="w-full bg-gray-200/50 dark:bg-gray-700/50 rounded-full h-3">
-                <div 
+                <div
                   className="bg-gradient-to-r from-green-600/90 to-green-700/90 h-3 rounded-full transition-all duration-300"
                   style={{ width: `${(Object.keys(responses).length / questions.length) * 100}%` }}
                 ></div>
@@ -686,7 +686,7 @@ const ExamPortal = () => {
                 {Math.round((Object.keys(responses).length / questions.length) * 100)}% complete
               </p>
             </div>
-            
+
             <button
               onClick={() => {
                 if (window.confirm("Are you sure you want to submit the exam? This action cannot be undone.")) {
@@ -707,4 +707,4 @@ const ExamPortal = () => {
   );
 };
 
-export default ExamPortal; 
+export default ExamPortal;
