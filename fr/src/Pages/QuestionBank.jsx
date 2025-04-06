@@ -48,7 +48,7 @@ const QuestionBank = () => {
     const [batchSelectedIds, setBatchSelectedIds] = useState([]);
     const [showBatchDeleteModal, setShowBatchDeleteModal] = useState(false);
     const [isBatchSelectionMode, setIsBatchSelectionMode] = useState(false);
-    
+
     // Toast notification state
     const [notification, setNotification] = useState({ show: false, message: '', type: '' });
 
@@ -91,10 +91,10 @@ const QuestionBank = () => {
         try {
             setLoading(true);
             setError('');
-            
+
             // Get token from localStorage
             const token = localStorage.getItem('token');
-            
+
             if (!token) {
                 console.warn('No authentication token found - redirecting to login');
                 setError('Authentication required. Please log in.');
@@ -102,7 +102,7 @@ const QuestionBank = () => {
                 navigate('/login');
                 return;
             }
-            
+
             // Include token in request headers
             console.log('Fetching questions with authentication');
             const res = await axios.get(`${API_BASE_URL}/api/questions`, {
@@ -111,23 +111,23 @@ const QuestionBank = () => {
                     'Cache-Control': 'no-cache'
                 }
             });
-            
+
             console.log('Successfully fetched questions:', res.data.length);
             setQuestions(res.data);
         } catch (err) {
             console.error("Error fetching questions:", err);
-            
+
             if (err.response) {
                 console.error('Server returned error:', err.response.status, err.response.data);
-                
+
                 if (err.response.status === 401) {
                     console.warn('Authentication failed (401) - redirecting to login');
                     setError('Your session has expired. Please log in again.');
-                    
+
                     // Clear authentication data
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');
-                    
+
                     // Redirect to login
                     navigate('/login');
                     return;
@@ -153,7 +153,7 @@ const QuestionBank = () => {
                 axios.get(`${API_BASE_URL}/api/curriculum/subjects`, { headers: getAuthHeader() }),
                 axios.get(`${API_BASE_URL}/api/curriculum/chapters`, { headers: getAuthHeader() })
             ]);
-            
+
             setClasses(classesRes.data || []);
             setSubjects(subjectsRes.data || []);
             setChapters(chaptersRes.data || []);
@@ -162,7 +162,7 @@ const QuestionBank = () => {
             showNotification("Failed to load curriculum data", "error");
         }
     };
-    
+
     // Add useEffect to filter subjects when class changes
     useEffect(() => {
         if (filters.class_id) {
@@ -170,11 +170,11 @@ const QuestionBank = () => {
             const classId = String(filters.class_id);
             const filtered = subjects.filter(s => String(s.class_id) === classId);
             setFilteredSubjects(filtered);
-            
+
             // If the current subject doesn't belong to this class, reset it
             if (filters.subject_id && !filtered.some(s => String(s.id) === String(filters.subject_id))) {
-                setFilters(prev => ({ 
-                    ...prev, 
+                setFilters(prev => ({
+                    ...prev,
                     subject_id: '',
                     subject: '',
                     chapter_id: '',
@@ -185,8 +185,8 @@ const QuestionBank = () => {
             setFilteredSubjects([]);
             // Clear subject and chapter when class is cleared
             if (filters.subject_id || filters.chapter_id) {
-                setFilters(prev => ({ 
-                    ...prev, 
+                setFilters(prev => ({
+                    ...prev,
                     subject_id: '',
                     subject: '',
                     chapter_id: '',
@@ -195,7 +195,7 @@ const QuestionBank = () => {
             }
         }
     }, [filters.class_id, subjects]);
-    
+
     // Add useEffect to filter chapters when subject changes
     useEffect(() => {
         if (filters.subject_id) {
@@ -203,11 +203,11 @@ const QuestionBank = () => {
             const subjectId = String(filters.subject_id);
             const filtered = chapters.filter(c => String(c.subject_id) === subjectId);
             setFilteredChapters(filtered);
-            
+
             // If the current chapter doesn't belong to this subject, reset it
             if (filters.chapter_id && !filtered.some(c => String(c.id) === String(filters.chapter_id))) {
-                setFilters(prev => ({ 
-                    ...prev, 
+                setFilters(prev => ({
+                    ...prev,
                     chapter_id: '',
                     chapter: ''
                 }));
@@ -216,8 +216,8 @@ const QuestionBank = () => {
             setFilteredChapters([]);
             // Clear chapter when subject is cleared
             if (filters.chapter_id) {
-                setFilters(prev => ({ 
-                    ...prev, 
+                setFilters(prev => ({
+                    ...prev,
                     chapter_id: '',
                     chapter: ''
                 }));
@@ -234,7 +234,7 @@ const QuestionBank = () => {
             setFilteredEditSubjects([]);
         }
     }, [editData?.class_id, subjects]);
-    
+
     // Filter chapters based on selected subject when editing
     useEffect(() => {
         if (editData?.subject_id) {
@@ -253,7 +253,7 @@ const QuestionBank = () => {
             [field]: value
         }));
     };
-    
+
     // Handle rich text editor changes
     const handleEditRichTextChange = (field, content) => {
         setEditData((prev) => ({
@@ -261,7 +261,7 @@ const QuestionBank = () => {
             [field]: content
         }));
     };
-    
+
     // Handle option changes
     const handleEditOptionChange = (index, content) => {
         const options = [...(editData.options || [])];
@@ -271,7 +271,7 @@ const QuestionBank = () => {
             options
         }));
     };
-    
+
     // Handle answer selection
     const handleEditAnswerChange = (value) => {
         setEditData((prev) => ({
@@ -283,28 +283,28 @@ const QuestionBank = () => {
     // Update Filters - handle both ID and name fields
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
-        
+
         if (name === 'class_id') {
             // When class changes, find its name
             const selectedClass = classes.find(c => String(c.id) === String(value));
-            setFilters(prev => ({ 
-                ...prev, 
+            setFilters(prev => ({
+                ...prev,
                 [name]: value,
                 classname: selectedClass ? selectedClass.name : ''
             }));
         } else if (name === 'subject_id') {
             // When subject changes, find its name
             const selectedSubject = subjects.find(s => String(s.id) === String(value));
-            setFilters(prev => ({ 
-                ...prev, 
+            setFilters(prev => ({
+                ...prev,
                 [name]: value,
                 subject: selectedSubject ? selectedSubject.name : ''
             }));
         } else if (name === 'chapter_id') {
             // When chapter changes, find its name
             const selectedChapter = chapters.find(c => String(c.id) === String(value));
-            setFilters(prev => ({ 
-                ...prev, 
+            setFilters(prev => ({
+                ...prev,
                 [name]: value,
                 chapter: selectedChapter ? selectedChapter.name : ''
             }));
@@ -312,7 +312,7 @@ const QuestionBank = () => {
             setFilters(prev => ({ ...prev, [name]: value }));
         }
     };
-    
+
     // Handle sort changes
     const handleSortChange = (field) => {
         if (sortBy === field) {
@@ -324,7 +324,7 @@ const QuestionBank = () => {
             setSortOrder('asc');
         }
     };
-    
+
     // Get sort indicator
     const getSortIndicator = (field) => {
         if (sortBy !== field) return null;
@@ -343,7 +343,7 @@ const QuestionBank = () => {
     }).sort((a, b) => {
         // Handle sorting
         let valueA, valueB;
-        
+
         // Get the values to compare based on sortBy
         switch (sortBy) {
             case 'id':
@@ -380,7 +380,7 @@ const QuestionBank = () => {
                 valueA = a.id || 0;
                 valueB = b.id || 0;
         }
-        
+
         // Compare the values based on sortOrder
         if (sortOrder === 'asc') {
             if (typeof valueA === 'string') {
@@ -395,19 +395,19 @@ const QuestionBank = () => {
         }
     });
 
-    // Extract Question 
+    // Extract Question
     const uniqueValues = (key) => [...new Set(questions.map(q => q[key]).filter(Boolean))];
 
     // Handle Select Question (add to cart)
     const handleSelectQuestion = (question) => {
         const questionId = question._id || question.id;
-        
+
         // Check if question is already selected using either _id or id
         const isAlreadySelected = selectedQuestions.some(q => {
             const currentId = q._id || q.id;
             return currentId === questionId;
         });
-        
+
         if (!isAlreadySelected) {
             const updatedSelection = [...selectedQuestions, question];
             setSelectedQuestions(updatedSelection);
@@ -426,7 +426,7 @@ const QuestionBank = () => {
             const currentId = q._id || q.id;
             return currentId !== questionId;
         });
-        
+
         setSelectedQuestions(updatedSelection);
         localStorage.setItem('selectedQuestions', JSON.stringify(updatedSelection));
         showNotification('Question removed from your bookmarks');
@@ -447,7 +447,7 @@ const QuestionBank = () => {
             showNotification('This feature is not available for students', 'warning');
             return;
         }
-        
+
         setIsBatchSelectionMode(!isBatchSelectionMode);
         if (isBatchSelectionMode) {
             // Clear selections when exiting batch mode
@@ -481,7 +481,7 @@ const QuestionBank = () => {
             showNotification('This feature is not available for students', 'warning');
             return;
         }
-        
+
         if (batchSelectedIds.length === 0) {
             showNotification('Please select questions first', 'warning');
             return;
@@ -491,7 +491,7 @@ const QuestionBank = () => {
             const currentId = q._id || q.id;
             return batchSelectedIds.includes(currentId);
         });
-        
+
         const newSelectedQuestions = [...selectedQuestions];
         const addedCount = {
             added: 0,
@@ -500,12 +500,12 @@ const QuestionBank = () => {
 
         questionsToAdd.forEach(question => {
             const questionId = question._id || question.id;
-            
+
             const isAlreadySelected = selectedQuestions.some(q => {
                 const currentId = q._id || q.id;
                 return currentId === questionId;
             });
-            
+
             if (!isAlreadySelected) {
                 newSelectedQuestions.push(question);
                 addedCount.added++;
@@ -517,7 +517,7 @@ const QuestionBank = () => {
         if (addedCount.added > 0) {
             setSelectedQuestions(newSelectedQuestions);
             localStorage.setItem('selectedQuestions', JSON.stringify(newSelectedQuestions));
-            
+
             let message = `Added ${addedCount.added} question${addedCount.added !== 1 ? 's' : ''} to your collection.`;
             if (addedCount.alreadySelected > 0) {
                 message += ` (${addedCount.alreadySelected} question${addedCount.alreadySelected !== 1 ? 's were' : ' was'} already in your collection)`;
@@ -550,27 +550,27 @@ const QuestionBank = () => {
                     headers: getAuthHeader()
                 });
             }
-            
+
             // Update questions list - handle both id and _id formats
             setQuestions(questions.filter(q => {
                 const currentId = q.id || q._id;
                 return !batchSelectedIds.includes(currentId);
             }));
-            
+
             // Update selected questions if needed - handle both id and _id formats
             const updatedSelection = selectedQuestions.filter(q => {
                 const currentId = q.id || q._id;
                 return !batchSelectedIds.includes(currentId);
             });
-            
+
             setSelectedQuestions(updatedSelection);
             localStorage.setItem('selectedQuestions', JSON.stringify(updatedSelection));
-            
+
             // Close modal and reset
             setShowBatchDeleteModal(false);
             setBatchSelectedIds([]);
             setIsBatchSelectionMode(false);
-            
+
             showNotification(`Successfully deleted ${batchSelectedIds.length} question${batchSelectedIds.length !== 1 ? 's' : ''}`);
         } catch (err) {
             console.error("Error deleting questions:", err);
@@ -607,7 +607,7 @@ const QuestionBank = () => {
             setIsDeleting(true);
             // Get token from localStorage
             const token = localStorage.getItem('token');
-            
+
             if (!token) {
                 setError('Authentication required. Please log in.');
                 showNotification('Authentication required. Please log in.', 'error');
@@ -623,12 +623,12 @@ const QuestionBank = () => {
                 setIsDeleting(false);
                 return;
             }
-            
+
             console.log("Sending DELETE request for ID:", deleteId); // Debug log
-            
+
             // Handle different ID formats - could be an object with id/_.id or just the ID value
             let questionIdToDelete;
-            
+
             if (typeof deleteId === 'object') {
                 // Object with ID - try both PostgreSQL id and MongoDB _id
                 questionIdToDelete = deleteId.id || deleteId._id;
@@ -636,7 +636,7 @@ const QuestionBank = () => {
                 // Direct ID value
                 questionIdToDelete = deleteId;
             }
-            
+
             if (!questionIdToDelete) {
                 setError('Cannot delete: Invalid question ID format');
                 showNotification('Cannot delete: Invalid question ID format', 'error');
@@ -644,20 +644,20 @@ const QuestionBank = () => {
                 setIsDeleting(false);
                 return;
             }
-            
+
             console.log("Parsed ID for deletion:", questionIdToDelete);
-            
+
             await axios.delete(`${API_BASE_URL}/api/questions/${questionIdToDelete}`, {
                 headers: getAuthHeader()
             });
-            
+
             // Filter from questions list using either id or _id property
             setQuestions(questions.filter((q) => {
                 // Handle both id formats
                 const currentId = q.id || q._id;
                 return currentId !== questionIdToDelete;
             }));
-            
+
             // Also remove from selected questions if present
             const updatedSelection = selectedQuestions.filter(q => {
                 // Handle both id formats
@@ -666,7 +666,7 @@ const QuestionBank = () => {
             });
             setSelectedQuestions(updatedSelection);
             localStorage.setItem('selectedQuestions', JSON.stringify(updatedSelection));
-            
+
             setShowDeleteModal(false);
             showNotification('Question deleted successfully!');
         } catch (err) {
@@ -688,10 +688,10 @@ const QuestionBank = () => {
         // Determine which ID to use - PostgreSQL numeric id or MongoDB _id
         const questionId = question.id || question._id;
         console.log("Editing question with ID:", questionId);
-        
+
         // Generate a temporary ID if one doesn't exist
         const finalId = questionId || `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
+
         // Create a clean copy with all necessary fields
         const editableQuestion = {
             id: finalId, // Set the numeric id
@@ -724,7 +724,7 @@ const QuestionBank = () => {
             ], // Initialize options array with existing option values
             isTemporary: !questionId // Flag to indicate if this is a temporary ID
         };
-        
+
         console.log("Prepared question for editing:", editableQuestion);
         setEditData(editableQuestion);
         setShowEditModal(true);
@@ -734,26 +734,26 @@ const QuestionBank = () => {
     const handleSaveEdit = async (e) => {
         // Prevent default form submission if called from a form
         if (e) e.preventDefault();
-        
+
         try {
             setIsUpdating(true);
             // Debugging information
             console.log("Saving edited question:", editData);
             console.log("Question ID:", editData._id);
-            
+
             // Get token from localStorage
             const token = localStorage.getItem('token');
-            
+
             if (!token) {
                 setError('Authentication required. Please log in.');
                 showNotification('Authentication required. Please log in.', 'error');
                 setIsUpdating(false);
                 return;
             }
-            
+
             // Check for ID - handle both MongoDB style _id and PostgreSQL numeric id
             const questionId = editData._id || editData.id;
-            
+
             if (!questionId) {
                 console.error("Question ID is missing. Data:", editData);
                 setError('Question ID is missing. Cannot update question.');
@@ -761,31 +761,31 @@ const QuestionBank = () => {
                 setIsUpdating(false);
                 return;
             }
-            
+
             // Required fields for validation
             const requiredFields = ['subject', 'classname', 'question_text', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_answer'];
             const missingFields = requiredFields.filter(field => !editData[field]);
-            
+
             if (missingFields.length > 0) {
                 console.error("Missing required fields:", missingFields);
                 showNotification(`Please fill in all required fields: ${missingFields.join(', ')}`, 'error');
                 setIsUpdating(false);
                 return;
             }
-            
+
             // Create a question data object that maps to backend field names
             const { isTemporary, question_text, correct_answer, ...otherFields } = editData;
-            
+
             const questionData = {
                 ...otherFields,
                 ques: question_text,  // Map question_text to ques for backend
                 answer: correct_answer // Map correct_answer to answer for backend
             };
-            
+
             // Handle temporary IDs by creating a new question instead of updating
             if (isTemporary) {
                 console.log("Creating new question with auto-assigned ID");
-                
+
                 // Try POST to /api/questions (root endpoint)
                 const response = await axios.post(`${API_BASE_URL}/api/questions`, questionData, {
                     headers: getAuthHeader()
@@ -795,17 +795,17 @@ const QuestionBank = () => {
                 // Use the appropriate ID for existing questions
                 const endpoint = `${API_BASE_URL}/api/questions/${questionId}`;
                 console.log("Sending PUT request to:", endpoint);
-                
+
                 await axios.put(endpoint, questionData, {
                     headers: getAuthHeader()
                 });
-                
+
                 showNotification('Question updated successfully!');
             }
-            
+
             // Refresh questions after edit
             fetchQuestions();
-            
+
             // Update the question in selected questions if present - handle both id and _id
             const updatedSelection = selectedQuestions.map(q => {
                 if ((q._id && q._id === questionId) || (q.id && q.id === questionId)) {
@@ -815,7 +815,7 @@ const QuestionBank = () => {
             });
             setSelectedQuestions(updatedSelection);
             localStorage.setItem('selectedQuestions', JSON.stringify(updatedSelection));
-            
+
             setEditData(null); // Clear edit data
             setShowEditModal(false);
         } catch (err) {
@@ -851,33 +851,33 @@ const QuestionBank = () => {
     // Function to render Base64 image
     const renderBase64Image = (base64String) => {
         if (!base64String) return null;
-        
+
         try {
             // Check if it's a Base64 string (simple validation)
             if (base64String.startsWith('data:image')) {
                 return (
-                    <img 
-                        src={base64String} 
-                        alt="Base64 encoded image" 
+                    <img
+                        src={base64String}
+                        alt="Base64 encoded image"
                         className="mt-2 max-w-full h-auto rounded-md"
                     />
                 );
             } else if (base64String.match(/^[A-Za-z0-9+/=]+$/)) {
                 // If it's a raw Base64 string without data URI
                 return (
-                    <img 
-                        src={`data:image/png;base64,${base64String}`} 
-                        alt="Base64 encoded image" 
+                    <img
+                        src={`data:image/png;base64,${base64String}`}
+                        alt="Base64 encoded image"
                         className="mt-2 max-w-full h-auto rounded-md"
                     />
                 );
             }
-            
+
             // If it's a URL, return it as is
             return (
-                <img 
-                    src={base64String} 
-                    alt="Image from URL" 
+                <img
+                    src={base64String}
+                    alt="Image from URL"
                     className="mt-2 max-w-full h-auto rounded-md"
                     onError={(e) => {
                         e.target.onerror = null;
@@ -918,14 +918,14 @@ const QuestionBank = () => {
         // Get the question ID - handle both PostgreSQL id and MongoDB _id
         const questionId = question.id || question._id;
         const questionInCollection = isInCollection(questionId);
-        
+
         return (
-            <div 
-                className={`bg-white dark:bg-gray-800 rounded-lg border ${
-                    isSelected 
-                        ? 'border-indigo-500 dark:border-indigo-500' 
+            <div
+                className={`bg-white dark:bg-gray-800 rounded-md border ${
+                    isSelected
+                        ? 'border-blue-500 dark:border-blue-500'
                         : 'border-gray-200 dark:border-gray-700'
-                } hover:border-gray-300 dark:hover:border-gray-600 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full`}
+                } hover:border-gray-300 dark:hover:border-gray-600 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col h-full`}
                 onClick={() => isBatchSelectionMode && !isStudent && onSelect(questionId)}
             >
                 {/* Header with Question ID chip */}
@@ -935,36 +935,36 @@ const QuestionBank = () => {
                         <div className="flex flex-col">
                             <div className="flex items-center gap-2 mb-2">
                                 <h3 className="text-base font-medium text-gray-900 dark:text-gray-100">
-                                    {question.subject || 'No Subject'} 
+                                    {question.subject || 'No Subject'}
                                 </h3>
                                 <span className="text-sm text-gray-500 dark:text-gray-400">· Class {question.classname?.replace(/^Class\s+/i, '') || 'N/A'}</span>
                                 {question.qserial && (
                                     <span className="text-xs text-gray-400 dark:text-gray-500">#{question.qserial}</span>
                                 )}
                             </div>
-                            
+
                             {/* Category chips */}
                             <div className="flex flex-wrap items-center gap-1.5">
                                 {/* Question ID chip */}
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
                                     ID: {(question.id || question._id || 'N/A').toString().substring(0, 8)}...
                                 </span>
-                                
+
                                 {question.chapter && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
                                         {question.chapter}
                                     </span>
                                 )}
                                 {question.topic && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
                                         {question.topic}
                                     </span>
                                 )}
                                 {question.difficulty_level && (
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium 
-                                        ${question.difficulty_level.toLowerCase() === 'easy' 
-                                            ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' 
-                                            : question.difficulty_level.toLowerCase() === 'medium' 
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium
+                                        ${question.difficulty_level.toLowerCase() === 'easy'
+                                            ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
+                                            : question.difficulty_level.toLowerCase() === 'medium'
                                                 ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400'
                                                 : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
                                         }`}>
@@ -973,7 +973,7 @@ const QuestionBank = () => {
                                 )}
                             </div>
                         </div>
-                        
+
                         {/* Right side - Batch selection checkbox */}
                         {isBatchSelectionMode && (
                             <div className="relative flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -983,9 +983,9 @@ const QuestionBank = () => {
                                     checked={isSelected}
                                     onChange={() => onSelect(questionId)}
                                 />
-                                <div className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center ${
-                                    isSelected 
-                                        ? 'bg-indigo-500 border-indigo-500' 
+                                <div className={`w-5 h-5 rounded-md border flex items-center justify-center ${
+                                    isSelected
+                                        ? 'bg-blue-500 border-blue-500'
                                         : 'border-gray-300 dark:border-gray-600'
                                 }`}>
                                     {isSelected && (
@@ -1018,11 +1018,11 @@ const QuestionBank = () => {
                             </div>
                         )}
                     </div>
-                    
+
                     {/* Options */}
                     <div className="grid grid-cols-1 gap-2 mb-6">
                         {['A', 'B', 'C', 'D'].map(option => (
-                            <div 
+                            <div
                                 key={`option-${questionId}-${option}`}
                                 className={`p-3 rounded-md border text-sm hover:shadow-sm transition-all duration-200 ${
                                     (question.correct_answer === option || question.answer === option)
@@ -1044,7 +1044,7 @@ const QuestionBank = () => {
                             </div>
                         ))}
                     </div>
-                    
+
                     {/* Answer and Explanation - Always visible */}
                     <div className="space-y-3">
                         {/* Answer */}
@@ -1138,7 +1138,7 @@ const QuestionBank = () => {
                                             e.stopPropagation();
                                             onEdit(question);
                                         }}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/10 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium transition-colors"
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded-md bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/10 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium transition-colors border border-blue-200 dark:border-blue-800/30"
                                     >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1150,7 +1150,7 @@ const QuestionBank = () => {
                                             e.stopPropagation();
                                             onDelete(question.id || question._id);
                                         }}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium transition-colors"
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded-md bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium transition-colors border border-red-200 dark:border-red-800/30"
                                     >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1162,7 +1162,7 @@ const QuestionBank = () => {
                                             e.stopPropagation();
                                             onAddToCollection(question);
                                         }}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-md bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/10 dark:hover:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-sm font-medium transition-colors"
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded-md bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/10 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium transition-colors border border-blue-200 dark:border-blue-800/30"
                                     >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -1171,7 +1171,7 @@ const QuestionBank = () => {
                                     </button>
                                 </>
                             )}
-                            
+
                             {/* Bookmark button - Always shown for all users */}
                             {isStudent && (
                                 <>
@@ -1204,7 +1204,7 @@ const QuestionBank = () => {
                                     )}
                                 </>
                             )}
-                            
+
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -1230,18 +1230,18 @@ const QuestionBank = () => {
         setCurrentEditingField(field);
         setShowEquationModal(true);
     };
-    
+
     // Function to insert equation into the current editing field
     const insertEquation = (equation) => {
         if (!currentEditingField) return;
-        
+
         const fieldValue = editData[currentEditingField] || '';
         // Insert the equation with $ delimiters
         setEditData(prev => ({
             ...prev,
             [currentEditingField]: `${fieldValue} $${equation}$ `
         }));
-        
+
         setShowEquationModal(false);
     };
 
@@ -1250,11 +1250,11 @@ const QuestionBank = () => {
         if (pageSize === 'all') {
             return filteredQuestions;
         }
-        
+
         const startIndex = (currentPage - 1) * pageSize;
         return filteredQuestions.slice(startIndex, startIndex + pageSize);
     };
-    
+
     // Reset pagination when filters change
     useEffect(() => {
         setCurrentPage(1);
@@ -1263,85 +1263,81 @@ const QuestionBank = () => {
     return (
         <div className="min-h-screen bg-white dark:bg-gray-900">
             {/* Floating Header */}
-            <div className="sticky top-4 z-30 px-4 sm:px-6 max-w-7xl mx-auto">
-                <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                            <div>
-                                <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Question Bank</h1>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                    {questions.length} Questions · {uniqueValues('subject').length} Subjects
-                                </p>
-                            </div>
-                            
-                            <div className="flex items-center gap-3 self-end sm:self-auto">
-                                {/* Add New Question button - Only render for non-student users */}
-                                {!isStudent && (
-                                    <button 
-                                        onClick={() => handleEditClick({ 
-                                            // Create a blank question template for adding new questions
-                                            subject: '',
-                                            classname: '',
-                                            chapter: '',
-                                            topic: '',
-                                            qserial: '',
-                                            difficulty_level: '',
-                                            question_text: '',
-                                            option_a: '',
-                                            option_b: '',
-                                            option_c: '',
-                                            option_d: '',
-                                            correct_answer: '',
-                                            explanation: '',
-                                            hint: '',
-                                            reference: ''
-                                        })}
-                                        className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all flex items-center gap-1"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                        </svg>
-                                        Add Question
-                                    </button>
-                                )}
-                                
-                                {/* Batch mode button - Only for non-student users */}
-                                {!isStudent && (
-                                    <button 
-                                        onClick={toggleBatchSelectionMode}
-                                        className={`px-3 py-1.5 text-white rounded-lg text-sm font-medium transition-all flex items-center gap-1 ${
-                                            isBatchSelectionMode 
-                                                ? 'bg-amber-500 hover:bg-amber-600' 
-                                                : 'bg-indigo-600 hover:bg-indigo-700'
-                                        }`}
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                                        </svg>
-                                        {isBatchSelectionMode ? 'Exit Batch Mode' : 'Batch Mode'}
-                                    </button>
-                                )}
-                                
-                                {/* My Collection button - Always available for all users */}
-                                <button 
-                                    onClick={() => navigate('/myquestion')}
-                                    className="px-3 py-1.5 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-all flex items-center gap-1"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                    </svg>
-                                    {isStudent ? 'My Bookmarks' : 'Collection'} ({selectedQuestions.length})
-                                </button>
-                            </div>
-                        </div>
+            <div className="sticky top-0 z-30 px-4 sm:px-6 max-w-7xl mx-auto bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 py-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Question Bank</h1>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            {questions.length} Questions · {uniqueValues('subject').length} Subjects
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 self-end sm:self-auto">
+                        {/* Add New Question button - Only render for non-student users */}
+                        {!isStudent && (
+                            <button
+                                onClick={() => handleEditClick({
+                                    // Create a blank question template for adding new questions
+                                    subject: '',
+                                    classname: '',
+                                    chapter: '',
+                                    topic: '',
+                                    qserial: '',
+                                    difficulty_level: '',
+                                    question_text: '',
+                                    option_a: '',
+                                    option_b: '',
+                                    option_c: '',
+                                    option_d: '',
+                                    correct_answer: '',
+                                    explanation: '',
+                                    hint: '',
+                                    reference: ''
+                                })}
+                                className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-1"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                                Add Question
+                            </button>
+                        )}
+
+                        {/* Batch mode button - Only for non-student users */}
+                        {!isStudent && (
+                            <button
+                                onClick={toggleBatchSelectionMode}
+                                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1 ${
+                                    isBatchSelectionMode
+                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                }`}
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                </svg>
+                                {isBatchSelectionMode ? 'Exit Batch Mode' : 'Batch Mode'}
+                            </button>
+                        )}
+
+                        {/* My Collection button - Always available for all users */}
+                        <button
+                            onClick={() => navigate('/myquestion')}
+                            className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/30 rounded-md text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-1"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            {isStudent ? 'My Bookmarks' : 'Collection'} ({selectedQuestions.length})
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-6">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-6">
                 {/* Non-sticky Filter Bar */}
                 <div className="pb-6">
-                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-md backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95 transition-all duration-200 hover:shadow-lg">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
                             {/* Class selection */}
                             <div>
@@ -1350,7 +1346,7 @@ const QuestionBank = () => {
                                     name="class_id"
                                     value={filters.class_id}
                                     onChange={handleFilterChange}
-                                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                                    className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 >
                                     <option value="">All Classes</option>
                                     {classes.map(c => (
@@ -1358,7 +1354,7 @@ const QuestionBank = () => {
                                     ))}
                                 </select>
                             </div>
-                            
+
                             {/* Subject selection - only enable if class is selected */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
@@ -1366,7 +1362,7 @@ const QuestionBank = () => {
                                     name="subject_id"
                                     value={filters.subject_id}
                                     onChange={handleFilterChange}
-                                    className={`w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ${!filters.class_id ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                    className={`w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!filters.class_id ? 'opacity-60 cursor-not-allowed' : ''}`}
                                     disabled={!filters.class_id}
                                 >
                                     <option value="">All Subjects</option>
@@ -1375,7 +1371,7 @@ const QuestionBank = () => {
                                     ))}
                                 </select>
                             </div>
-                            
+
                             {/* Chapter selection - only enable if subject is selected */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chapter</label>
@@ -1383,7 +1379,7 @@ const QuestionBank = () => {
                                     name="chapter_id"
                                     value={filters.chapter_id}
                                     onChange={handleFilterChange}
-                                    className={`w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ${!filters.subject_id ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                    className={`w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!filters.subject_id ? 'opacity-60 cursor-not-allowed' : ''}`}
                                     disabled={!filters.subject_id}
                                 >
                                     <option value="">All Chapters</option>
@@ -1392,7 +1388,7 @@ const QuestionBank = () => {
                                     ))}
                                 </select>
                             </div>
-                            
+
                             {/* Topic filter */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Topic</label>
@@ -1400,7 +1396,7 @@ const QuestionBank = () => {
                                     name="topic"
                                     value={filters.topic}
                                     onChange={handleFilterChange}
-                                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                                    className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 >
                                     <option value="">All Topics</option>
                                     {uniqueValues("topic").map((val, idx) => (
@@ -1408,7 +1404,7 @@ const QuestionBank = () => {
                                     ))}
                                 </select>
                             </div>
-                            
+
                             {/* Difficulty level filter */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Difficulty Level</label>
@@ -1416,7 +1412,7 @@ const QuestionBank = () => {
                                     name="difficulty_level"
                                     value={filters.difficulty_level}
                                     onChange={handleFilterChange}
-                                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                                    className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 >
                                     <option value="">All Difficulty Levels</option>
                                     {uniqueValues("difficulty_level").map((val, idx) => (
@@ -1424,7 +1420,7 @@ const QuestionBank = () => {
                                     ))}
                                 </select>
                             </div>
-                            
+
                             {/* Reference filter */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reference</label>
@@ -1432,7 +1428,7 @@ const QuestionBank = () => {
                                     name="reference"
                                     value={filters.reference}
                                     onChange={handleFilterChange}
-                                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                                    className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 >
                                     <option value="">All References</option>
                                     {uniqueValues("reference").map((val, idx) => (
@@ -1444,7 +1440,7 @@ const QuestionBank = () => {
                         <div className="mt-4 flex justify-end">
                             <button
                                 onClick={clearFilters}
-                                className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                                className="px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                             >
                                 Clear Filters
                             </button>
@@ -1454,48 +1450,48 @@ const QuestionBank = () => {
 
                 {/* Batch Selection Bar */}
                 {isBatchSelectionMode && (
-                    <div className="bg-indigo-50 dark:bg-indigo-900/10 rounded-lg border border-indigo-100 dark:border-indigo-800/20 p-4 mb-6 shadow-sm">
+                    <div className="bg-blue-50 dark:bg-blue-900/10 rounded-md border border-blue-100 dark:border-blue-800/20 p-4 mb-6 shadow-sm">
                         <div className="flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
-                                <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
+                                <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
                                     {batchSelectedIds.length} selected
                                 </span>
-                                
-                                <button 
+
+                                <button
                                     onClick={selectAllQuestions}
-                                    className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+                                    className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                                 >
                                     Select All
                                 </button>
-                                
-                                <button 
+
+                                <button
                                     onClick={clearSelection}
-                                    className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                                    className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
                                 >
                                     Clear
                                 </button>
                             </div>
-                            
+
                             <div className="flex gap-3">
-                                <button 
+                                <button
                                     onClick={addBatchToCollection}
                                     disabled={batchSelectedIds.length === 0}
-                                    className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
+                                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                                         batchSelectedIds.length === 0
-                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                            : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
+                                            : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
                                 >
                                     Add to Collection
                                 </button>
-                                
-                                <button 
+
+                                <button
                                     onClick={openBatchDeleteModal}
                                     disabled={batchSelectedIds.length === 0}
-                                    className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
+                                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                                         batchSelectedIds.length === 0
-                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                            : 'bg-red-600 text-white hover:bg-red-700'
+                                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
+                                            : 'bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/30 hover:bg-red-100 dark:hover:bg-red-900/20'
                                     }`}
                                 >
                                     Delete
@@ -1537,13 +1533,13 @@ const QuestionBank = () => {
 
                 {/* Pagination */}
                 {filteredQuestions.length > 0 && (
-                    <Pagination 
+                    <Pagination
                         totalItems={filteredQuestions.length}
                         currentPage={currentPage}
                         pageSize={pageSize}
                         onPageChange={setCurrentPage}
                         onPageSizeChange={setPageSize}
-                        className="mt-6"
+                        className="mt-6 bg-white dark:bg-gray-800 p-4 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm"
                     />
                 )}
             </div>
@@ -1552,8 +1548,8 @@ const QuestionBank = () => {
             {notification.show && (
                 <div className="fixed bottom-4 right-4 z-[9999] animate-fade-in-up">
                     <div className={`px-6 py-3 rounded-md shadow-xl flex items-center ${
-                        notification.type === 'error' 
-                            ? 'bg-red-600 text-white' 
+                        notification.type === 'error'
+                            ? 'bg-red-600 text-white'
                             : notification.type === 'warning'
                                 ? 'bg-amber-500 text-white'
                                 : 'bg-green-600 text-white'
@@ -1593,12 +1589,12 @@ const QuestionBank = () => {
                         This action cannot be undone.
                     </p>
                 </div>
-                
+
                 <ModalActions>
                     <SecondaryButton onClick={() => setShowDeleteModal(false)}>
                         Cancel
                     </SecondaryButton>
-                    <DangerButton 
+                    <DangerButton
                         onClick={deleteQuestion}
                         disabled={isDeleting}
                     >
@@ -1622,12 +1618,12 @@ const QuestionBank = () => {
                         This action cannot be undone.
                     </p>
                 </div>
-                
+
                 <ModalActions>
                     <SecondaryButton onClick={() => setShowBatchDeleteModal(false)}>
                         Cancel
                     </SecondaryButton>
-                    <DangerButton 
+                    <DangerButton
                         onClick={batchDeleteQuestions}
                         disabled={isDeleting}
                     >
@@ -1667,7 +1663,7 @@ const QuestionBank = () => {
                                         ))}
                                     </select>
                                 </div>
-                                
+
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         Subject
@@ -1688,7 +1684,7 @@ const QuestionBank = () => {
                                         ))}
                                     </select>
                                 </div>
-                                
+
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         Chapter
@@ -1710,7 +1706,7 @@ const QuestionBank = () => {
                                     </select>
                                 </div>
                             </div>
-                            
+
                             {/* Metadata */}
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div>
@@ -1725,7 +1721,7 @@ const QuestionBank = () => {
                                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-300"
                                     />
                                 </div>
-                                
+
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         Difficulty Level
@@ -1742,7 +1738,7 @@ const QuestionBank = () => {
                                         <option value="Hard">Hard</option>
                                     </select>
                                 </div>
-                                
+
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         Question Serial
@@ -1756,7 +1752,7 @@ const QuestionBank = () => {
                                     />
                                 </div>
                             </div>
-                            
+
                             {/* Question */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1764,7 +1760,7 @@ const QuestionBank = () => {
                                 </label>
                                 <div className="relative">
                                     <div className="rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white dark:bg-gray-800">
-                                        <EnhancedRichTextEditor 
+                                        <EnhancedRichTextEditor
                                             value={editData.question_text || editData.question || ''}
                                             onChange={(content) => handleEditRichTextChange('question_text', content)}
                                             onEquationAdd={() => openEquationModal('question_text')}
@@ -1782,13 +1778,13 @@ const QuestionBank = () => {
                                     </button>
                                 </div>
                             </div>
-                            
+
                             {/* Options */}
                             <div>
                                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                                     Options
                                 </h3>
-                                
+
                                 <div className="space-y-3">
                                     {/* Option A */}
                                     <div>
@@ -1808,7 +1804,7 @@ const QuestionBank = () => {
                                         </div>
                                         <div className="relative">
                                             <div className="rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white dark:bg-gray-800">
-                                                <EnhancedRichTextEditor 
+                                                <EnhancedRichTextEditor
                                                     value={editData.option_a || ''}
                                                     onChange={(content) => handleEditRichTextChange('option_a', content)}
                                                     onEquationAdd={() => openEquationModal('option_a')}
@@ -1826,7 +1822,7 @@ const QuestionBank = () => {
                                             </button>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Option B */}
                                     <div>
                                         <div className="flex items-center mb-1">
@@ -1845,7 +1841,7 @@ const QuestionBank = () => {
                                         </div>
                                         <div className="relative">
                                             <div className="rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white dark:bg-gray-800">
-                                                <EnhancedRichTextEditor 
+                                                <EnhancedRichTextEditor
                                                     value={editData.option_b || ''}
                                                     onChange={(content) => handleEditRichTextChange('option_b', content)}
                                                     onEquationAdd={() => openEquationModal('option_b')}
@@ -1863,7 +1859,7 @@ const QuestionBank = () => {
                                             </button>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Option C */}
                                     <div>
                                         <div className="flex items-center mb-1">
@@ -1882,7 +1878,7 @@ const QuestionBank = () => {
                                         </div>
                                         <div className="relative">
                                             <div className="rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white dark:bg-gray-800">
-                                                <EnhancedRichTextEditor 
+                                                <EnhancedRichTextEditor
                                                     value={editData.option_c || ''}
                                                     onChange={(content) => handleEditRichTextChange('option_c', content)}
                                                     onEquationAdd={() => openEquationModal('option_c')}
@@ -1900,7 +1896,7 @@ const QuestionBank = () => {
                                             </button>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Option D */}
                                     <div>
                                         <div className="flex items-center mb-1">
@@ -1919,7 +1915,7 @@ const QuestionBank = () => {
                                         </div>
                                         <div className="relative">
                                             <div className="rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white dark:bg-gray-800">
-                                                <EnhancedRichTextEditor 
+                                                <EnhancedRichTextEditor
                                                     value={editData.option_d || ''}
                                                     onChange={(content) => handleEditRichTextChange('option_d', content)}
                                                     onEquationAdd={() => openEquationModal('option_d')}
@@ -1939,7 +1935,7 @@ const QuestionBank = () => {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             {/* Explanation */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1947,7 +1943,7 @@ const QuestionBank = () => {
                                 </label>
                                 <div className="relative">
                                     <div className="rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white dark:bg-gray-800">
-                                        <EnhancedRichTextEditor 
+                                        <EnhancedRichTextEditor
                                             value={editData.explanation || ''}
                                             onChange={(content) => handleEditRichTextChange('explanation', content)}
                                             onEquationAdd={() => openEquationModal('explanation')}
@@ -1965,7 +1961,7 @@ const QuestionBank = () => {
                                     </button>
                                 </div>
                             </div>
-                            
+
                             {/* Hint */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1973,7 +1969,7 @@ const QuestionBank = () => {
                                 </label>
                                 <div className="relative">
                                     <div className="rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white dark:bg-gray-800">
-                                        <EnhancedRichTextEditor 
+                                        <EnhancedRichTextEditor
                                             value={editData.hint || ''}
                                             onChange={(content) => handleEditRichTextChange('hint', content)}
                                             onEquationAdd={() => openEquationModal('hint')}
@@ -1991,7 +1987,7 @@ const QuestionBank = () => {
                                     </button>
                                 </div>
                             </div>
-                            
+
                             {/* Reference */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -2006,7 +2002,7 @@ const QuestionBank = () => {
                                 />
                             </div>
                         </div>
-                        
+
                         <ModalActions>
                             <SecondaryButton type="button" onClick={() => setShowEditModal(false)}>
                                 Cancel

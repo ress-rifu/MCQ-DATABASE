@@ -1166,6 +1166,17 @@ router.post('/:id/verify-access', authMiddleware, async (req, res) => {
   }
 });
 
+// Get total exams count for dashboard
+router.get('/count', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*) FROM exams');
+    res.json({ count: parseInt(result.rows[0].count) });
+  } catch (error) {
+    console.error('Error counting exams:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get exam leaderboard - Available to all users
 router.get('/:id/leaderboard', authMiddleware, async (req, res) => {
   try {
