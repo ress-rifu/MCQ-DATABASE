@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { API_BASE_URL, getAuthHeader } from '../apiConfig';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -7,9 +7,9 @@ import Pagination from '../Components/Pagination';
 import { MdPlayArrow, MdEdit, MdDelete, MdRefresh, MdLeaderboard, MdFilterList, MdAdd, MdClear } from 'react-icons/md';
 
 const ExamsList = () => {
-  const navigate = useNavigate();
+  // No longer need navigate at this level
   const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const location = useLocation();
 
   // Get user data from localStorage
   useEffect(() => {
@@ -17,7 +17,6 @@ const ExamsList = () => {
     if (userData) {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
-      setIsAdmin(parsedUser.role === 'admin');
     }
   }, []);
 
@@ -31,7 +30,7 @@ const ExamsList = () => {
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const pageSize = 10;
 
   // Curriculum state for filters
   const [classes, setClasses] = useState([]);
@@ -44,29 +43,69 @@ const ExamsList = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   // Fetch exams
-  useEffect(() => {
-    const fetchExams = async () => {
-      setLoading(true);
-      try {
-        const params = { ...filters };
-        Object.keys(params).forEach(key => !params[key] && delete params[key]);
+  const fetchExams = useCallback(async () => {
+    setLoading(true);
+    try {
+      console.log('Fetching exams with filters:', filters);
+      const params = { ...filters };
+      Object.keys(params).forEach(key => !params[key] && delete params[key]);
 
-        const response = await axios.get(`${API_BASE_URL}/api/exams`, {
-          headers: getAuthHeader(),
-          params
-        });
+      // Add a cache-busting parameter to ensure we get fresh data
+      params._nocache = Date.now();
 
+      // Log the auth token for debugging
+      const authToken = localStorage.getItem('token');
+      console.log('Auth token for exam list:', authToken ? 'Present' : 'Missing');
+      console.log('Auth token value:', authToken);
+
+      const headers = getAuthHeader();
+      console.log('Request headers for exam list:', headers);
+
+      const response = await axios.get(`${API_BASE_URL}/api/exams`, {
+        headers,
+        params,
+        timeout: 10000 // 10 second timeout for debugging
+      });
+
+      console.log('Exams fetched successfully:', response.data.length, 'exams');
+      console.log('Exam data:', response.data);
+
+      if (Array.isArray(response.data)) {
         setExams(response.data);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching exams:', error);
-        toast.error('Failed to load exams');
-        setLoading(false);
+      } else {
+        console.error('Expected array of exams but got:', response.data);
+        setExams([]);
+        toast.error('Invalid exam data received from server');
       }
-    };
-
-    fetchExams();
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching exams:', error);
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+      }
+      toast.error('Failed to load exams: ' + (error.response?.data?.message || error.message));
+      setLoading(false);
+    }
   }, [filters]);
+
+  // Check for query parameters that indicate we should refresh the list
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const created = queryParams.get('created');
+    
+    if (created) {
+      // If we have a 'created' parameter, show a success message
+      toast.success('Exam created successfully! Refreshing list...');
+      // Force a refresh of the exam list
+      fetchExams();
+    }
+  }, [location.search, fetchExams]);
+
+  // Fetch exams on component mount and when filters change
+  useEffect(() => {
+    fetchExams();
+  }, [fetchExams]);
 
   // Fetch curriculum data for filters
   useEffect(() => {
@@ -76,10 +115,10 @@ const ExamsList = () => {
           axios.get(`${API_BASE_URL}/api/curriculum/classes`, {
             headers: getAuthHeader()
           }),
-          axios.get(`${API_URL}/api/curriculum/subjects`, {
+          axios.get(`${API_BASE_URL}/api/curriculum/subjects`, {
             headers: getAuthHeader()
           }),
-          axios.get(`${API_URL}/api/curriculum/chapters`, {
+          axios.get(`${API_BASE_URL}/api/curriculum/chapters`, {
             headers: getAuthHeader()
           })
         ]);
@@ -157,7 +196,7 @@ const ExamsList = () => {
     }
 
     try {
-      await axios.delete(`${API_URL}/api/exams/${examId}`, {
+      await axios.delete(`${API_BASE_URL}/api/exams/${examId}`, {
         headers: getAuthHeader()
       });
 
@@ -174,7 +213,7 @@ const ExamsList = () => {
   // Handle recalculate scores
   const handleRecalculate = async (examId) => {
     try {
-      await axios.post(`${API_URL}/api/exams/${examId}/recalculate`, {}, {
+      await axios.post(`${API_BASE_URL}/api/exams/${examId}/recalculate`, {}, {
         headers: getAuthHeader()
       });
 
@@ -377,6 +416,15 @@ const ExamsList = () => {
           >
             <MdFilterList className="text-base" />
             {showFilters ? 'Hide Filters' : 'Show Filters'}
+          </button>
+
+          <button
+            onClick={fetchExams}
+            className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5 border border-gray-200 dark:border-gray-700"
+            title="Refresh exam list"
+          >
+            <MdRefresh className="text-base" />
+            Refresh
           </button>
 
           {/* Only show Create Exam button for non-student users */}

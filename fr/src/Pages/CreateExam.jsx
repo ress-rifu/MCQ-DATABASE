@@ -377,69 +377,239 @@ const CreateExam = () => {
   };
 
   // Submit form
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     if (e) e.preventDefault();
     console.log('Submitting exam form...');
-
-    // Validation
-    if (!formData.title) {
-      toast.error('Exam title is required');
-      setActiveTab('details');
+    
+    // Show immediate feedback
+    toast.loading('Validating exam data...', { id: 'exam-submit' });
+    
+    // Comprehensive validation for all required fields
+    const validationErrors = [];
+    const cautions = [];
+    
+    // Critical errors (prevent submission)
+    if (!formData.title) validationErrors.push('Exam title is required');
+    if (!formData.course_id) validationErrors.push('Please select a course');
+    if (formData.chapters.length === 0) validationErrors.push('Select at least one chapter');
+    if (selectedQuestions.length === 0) validationErrors.push('Add at least one question');
+    if (formData.duration_minutes <= 0) validationErrors.push('Exam duration must be greater than 0 minutes');
+    if (formData.start_datetime >= formData.end_datetime) validationErrors.push('End date must be after start date');
+    
+    // Cautions (warnings but allow submission)
+    if (!formData.description) cautions.push('Exam description is empty');
+    if (!formData.syllabus) cautions.push('Exam syllabus information is empty');
+    if (formData.negative_marking && formData.negative_percentage <= 0) cautions.push('Negative marking is enabled but percentage is set to 0');
+    if (selectedQuestions.length < 5) cautions.push('Exam has fewer than 5 questions');
+    if (formData.duration_minutes < 10) cautions.push('Exam duration is very short (less than 10 minutes)');
+    
+    // Display cautions if any
+    if (cautions.length > 0 && validationErrors.length === 0) {
+      toast.dismiss('exam-submit');
+      toast.warning('Some recommended information is missing. See below.', { duration: 5000 });
+      
+      // Create a detailed caution message
+      const cautionMessage = 'CAUTION: The following information is recommended but not required:\n\n- ' + 
+        cautions.join('\n- ') + 
+        '\n\nDo you want to continue anyway?';
+      
+      // Ask user if they want to continue despite cautions
+      const shouldContinue = window.confirm(cautionMessage);
+      
+      if (!shouldContinue) {
+        return; // Stop submission if user cancels
+      }
+      
+      // Otherwise, continue with submission
+      toast.loading('Proceeding with submission...', { id: 'exam-submit' });
+    }
+    
+    // Display validation errors if any
+    if (validationErrors.length > 0) {
+      toast.dismiss('exam-submit');
+      toast.error('Cannot create exam. Please fix the following issues:', { duration: 5000 });
+      validationErrors.forEach(error => toast.error(error, { duration: 5000 }));
+      
+      // Navigate to appropriate tab
+      setActiveTab(validationErrors.some(err => err.includes('question')) ? 'questions' : 'details');
       return;
     }
-
-    if (selectedQuestions.length === 0) {
-      toast.error('Please add at least one question to the exam');
-      setActiveTab('questions');
-      return;
-    }
-
-    if (formData.chapters.length === 0) {
-      toast.error('Please select at least one chapter for the exam');
-      setActiveTab('details');
-      return;
-    }
-
-    if (!formData.course_id) {
-      toast.error('Please select a course for the exam');
-      setActiveTab('details');
-      return;
-    }
-
+    
+    // Set submitting state
     setIsSubmitting(true);
-
-    try {
-      // Prepare the payload
+    
+    // Use a timeout to continue the process asynchronously
+    setTimeout(() => {
+      createExam();
+    }, 100);
+  };
+  
+  // Function to perform the actual exam creation
+  const createExam = async () => {
+    try {  
+      console.log('Creating exam with data:', formData);
+      console.log('Selected questions:', selectedQuestions);
+      
+      // We already validated in handleSubmit, so proceed with API call
+      console.log('Proceeding with exam creation API call');
+      toast.loading('Connecting to server...', { id: 'creating-exam' });
+      // Prepare the payload with all required fields
       const payload = {
-        ...formData,
-        negative_percentage: formData.negative_marking ? formData.negative_percentage : 0,
+        // Basic exam info
+        title: formData.title.trim(),
+        description: formData.description || '',
+        start_datetime: formData.start_datetime,
+        end_datetime: formData.end_datetime,
+        syllabus: formData.syllabus || '',
+        duration_minutes: parseInt(formData.duration_minutes) || 60,
+        total_marks: selectedQuestions.reduce((sum, q) => sum + (q.marks || 1), 0),
+        course_id: formData.course_id,
+        chapters: formData.chapters,
+
+        // Question settings
+        negative_marking: formData.negative_marking || false,
+        negative_percentage: formData.negative_marking ? (formData.negative_percentage || 0) : 0,
+        shuffle_questions: formData.shuffle_questions || false,
+        can_change_answer: formData.can_change_answer !== undefined ? formData.can_change_answer : true,
+
+        // Questions array
         questions: selectedQuestions.map(q => ({
           id: q.id,
           marks: q.marks || 1
-        }))
+        })),
+
+        // Basic Settings
+        introduction: formData.introduction || '',
+
+        // Question Settings
+        pagination_type: formData.pagination_type || 'all',
+        allow_blank_answers: formData.allow_blank_answers !== undefined ? formData.allow_blank_answers : true,
+
+        // Review settings
+        conclusion_text: formData.conclusion_text || '',
+        show_custom_result_message: formData.show_custom_result_message || false,
+        pass_message: formData.pass_message || 'Congratulations! You passed the exam.',
+        fail_message: formData.fail_message || 'Sorry, you did not pass the exam.',
+        passing_score: formData.passing_score || 60,
+        show_score: formData.show_score !== undefined ? formData.show_score : true,
+        show_test_outline: formData.show_test_outline !== undefined ? formData.show_test_outline : true,
+        show_correct_incorrect: formData.show_correct_incorrect !== undefined ? formData.show_correct_incorrect : true,
+        show_correct_answer: formData.show_correct_answer !== undefined ? formData.show_correct_answer : true,
+        show_explanation: formData.show_explanation !== undefined ? formData.show_explanation : true,
+
+        // Access control
+        access_type: formData.access_type || 'anyone',  // Fixed: changed 'open' to 'anyone' to match expected values
+        access_passcode: formData.access_passcode || '',
+        identifier_list: formData.identifier_list || [],
+        email_list: formData.email_list || [],
+        time_limit_type: formData.time_limit_type || 'specified',
+        attempt_limit_type: formData.attempt_limit_type || 'unlimited',
+        max_attempts: formData.max_attempts || 1,
+        identifier_prompt: formData.identifier_prompt || 'Please enter your ID',
+
+        // Browser settings
+        disable_right_click: formData.disable_right_click || false,
+        disable_copy_paste: formData.disable_copy_paste || false,
+        disable_translate: formData.disable_translate || false,
+        disable_autocomplete: formData.disable_autocomplete || false,
+        disable_spellcheck: formData.disable_spellcheck || false,
+        disable_printing: formData.disable_printing || false,
+
+        // Add created_by field with the current user's ID
+        created_by: user?.id
       };
+
+      // Convert dates to ISO strings if they are Date objects
+      if (payload.start_datetime instanceof Date) {
+        payload.start_datetime = payload.start_datetime.toISOString();
+      }
+
+      if (payload.end_datetime instanceof Date) {
+        payload.end_datetime = payload.end_datetime.toISOString();
+      }
 
       console.log('Sending payload to API:', payload);
       console.log('API URL:', `${API_BASE_URL}/api/exams${isEditing ? `/${id}` : ''}`);
 
       let response;
 
-      if (isEditing) {
-        response = await axios.put(`${API_BASE_URL}/api/exams/${id}`, payload, {
-          headers: getAuthHeader()
-        });
-        console.log('Update response:', response.data);
-        toast.success('Exam updated successfully!');
-      } else {
-        response = await axios.post(`${API_BASE_URL}/api/exams`, payload, {
-          headers: getAuthHeader()
-        });
-        console.log('Create response:', response.data);
-        toast.success('Exam created successfully!');
+      // Log the auth token for debugging
+      const authToken = localStorage.getItem('token');
+      console.log('Auth token:', authToken ? 'Present' : 'Missing');
+      console.log('User role:', user?.role);
+
+      // Ensure user is admin
+      if (user?.role !== 'admin') {
+        toast.error('Only administrators can create or edit exams');
+        setIsSubmitting(false);
+        return;
       }
 
-      // Navigate to exams list after successful save
-      navigate('/exams');
+      try {
+        // Prepare headers with authentication token
+        const headers = {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        };
+
+        console.log('Request headers:', headers);
+        console.log('Auth token value:', authToken);
+        console.log('Request URL:', isEditing ? `${API_BASE_URL}/api/exams/${id}` : `${API_BASE_URL}/api/exams`);
+
+        // Update toast message
+        toast.dismiss('creating-exam');
+        toast.loading('Sending to server...', { id: 'sending' });
+
+        if (isEditing) {
+          response = await axios.put(`${API_BASE_URL}/api/exams/${id}`, payload, { headers });
+          console.log('Update response:', response.data);
+          toast.dismiss('processing');
+          toast.success('Exam updated successfully!');
+          
+          // Navigate back to exams list after successful update
+          setTimeout(() => {
+            navigate('/exams');
+          }, 1000);
+        } else {
+          console.log('Sending create exam request with payload:', JSON.stringify(payload, null, 2));
+          // Make API call with simplified error handling
+          console.log('About to make API call to create exam');
+          
+          // Use a simple fetch call for maximum compatibility
+          fetch(`${API_BASE_URL}/api/exams`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(payload)
+          })
+          .then(response => {
+            console.log('Got response from server, status:', response.status);
+            if (response.ok) {
+              return response.json();
+            } else {
+              throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            }
+          })
+          .then(data => {
+            console.log('Successfully parsed response:', data);
+            toast.dismiss('sending');
+            toast.success('Exam created successfully!');
+            
+            // Simple alert and navigation
+            alert('Exam created successfully! Click OK to go to exams list.');
+            window.location.href = '/exams';
+          })
+          .catch(error => {
+            console.error('Error during fetch:', error);
+            toast.dismiss('sending');
+            toast.error(`Failed to create exam: ${error.message}`);
+            alert(`Error creating exam: ${error.message}`);
+            setIsSubmitting(false);
+          });
+        }
+      } catch (apiError) {
+        console.error('API Error:', apiError);
+        throw apiError; // Re-throw to be caught by the outer catch block
+      }
     } catch (error) {
       console.error('Error saving exam:', error);
 
@@ -448,11 +618,28 @@ const CreateExam = () => {
         // that falls out of the range of 2xx
         console.error('Error response data:', error.response.data);
         console.error('Error response status:', error.response.status);
+        console.error('Error response headers:', error.response.headers);
 
         if (error.response.status === 401) {
           toast.error('Authentication error. Please log in again.');
+          // Force re-login
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setTimeout(() => navigate('/login'), 2000);
         } else if (error.response.status === 403) {
           toast.error('You do not have permission to create or edit exams.');
+          console.error('Permission error details:', error.response.data);
+        } else if (error.response.status === 400) {
+          // Handle validation errors from the server
+          const errorMessage = error.response.data?.message || 'Invalid form data';
+          toast.error(errorMessage);
+
+          // If there are specific field errors, show them
+          if (error.response.data?.errors) {
+            Object.values(error.response.data.errors).forEach(err => {
+              toast.error(err);
+            });
+          }
         } else {
           toast.error(error.response.data?.message || 'Failed to save exam');
         }
@@ -464,6 +651,9 @@ const CreateExam = () => {
         // Something happened in setting up the request that triggered an Error
         toast.error('Error: ' + error.message);
       }
+
+      // Stay on the current page if there was an error
+      setActiveTab('details');
     } finally {
       setIsSubmitting(false);
     }
@@ -505,7 +695,7 @@ const CreateExam = () => {
           <FiBookOpen className="text-blue-500" />
           <span>Exam Details</span>
         </h3>
-        <div className="space-y-5">
+        <div className="space-y-3 sm:space-y-4 md:space-y-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Exam Title
@@ -535,7 +725,7 @@ const CreateExam = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                 <FiCalendar className="text-gray-500" size={14} />
@@ -610,8 +800,8 @@ const CreateExam = () => {
           <FiList className="text-blue-500" />
           <span>Chapter Selection</span>
         </h3>
-        <div className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="space-y-3 sm:space-y-4 md:space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Class
@@ -655,7 +845,7 @@ const CreateExam = () => {
               <span>Chapters</span>
               <span className="text-xs text-blue-600 font-medium">{formData.chapters.length} selected</span>
             </label>
-            <div className="mt-1 p-4 border border-gray-200 rounded-lg max-h-60 overflow-y-auto bg-white">
+            <div className="mt-1 p-3 sm:p-4 border border-gray-200 rounded-lg max-h-60 overflow-y-auto bg-white">
               {formData.course_id ? (
                 availableChapters.length > 0 ? (
                   <div className="space-y-3">
@@ -738,7 +928,7 @@ const CreateExam = () => {
           <FiSettings className="text-blue-500" />
           <span>Basic Settings</span>
         </h3>
-        <div className="space-y-5">
+        <div className="space-y-3 sm:space-y-4 md:space-y-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Test Introduction
@@ -852,7 +1042,7 @@ const CreateExam = () => {
             </div>
 
             {formData.negative_marking && (
-              <div className="ml-6 mt-2 p-3 bg-gray-50 rounded-md border border-gray-200">
+              <div className="ml-1 sm:ml-2 md:ml-6 mt-2 p-2 sm:p-3 bg-gray-50 rounded-md border border-gray-200">
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Negative Percentage (%)
                 </label>
@@ -935,7 +1125,7 @@ const CreateExam = () => {
             </div>
 
             {formData.show_custom_result_message && (
-              <div className="ml-6 space-y-4 p-4 bg-gray-50 rounded-md border border-gray-200">
+              <div className="ml-1 sm:ml-2 md:ml-6 space-y-2 sm:space-y-3 md:space-y-4 p-2 sm:p-3 md:p-4 bg-gray-50 rounded-md border border-gray-200">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Passing Score (%)
@@ -1119,7 +1309,7 @@ const CreateExam = () => {
                 </div>
 
                 {formData.access_type === 'passcode' && (
-                  <div className="ml-6 mt-3 p-4 bg-gray-50 rounded-md border border-gray-200">
+                  <div className="ml-1 sm:ml-2 md:ml-6 mt-3 p-2 sm:p-3 md:p-4 bg-gray-50 rounded-md border border-gray-200">
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       Passcode
                     </label>
@@ -1150,7 +1340,7 @@ const CreateExam = () => {
                 </div>
 
                 {formData.access_type === 'identifier_list' && (
-                  <div className="ml-6 mt-3 p-4 bg-gray-50 rounded-md border border-gray-200">
+                  <div className="ml-1 sm:ml-2 md:ml-6 mt-3 p-2 sm:p-3 md:p-4 bg-gray-50 rounded-md border border-gray-200">
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       List of allowed identifiers (one per line)
                     </label>
@@ -1180,7 +1370,7 @@ const CreateExam = () => {
                 </div>
 
                 {formData.access_type === 'email_list' && (
-                  <div className="ml-6 mt-3 p-4 bg-gray-50 rounded-md border border-gray-200">
+                  <div className="ml-1 sm:ml-2 md:ml-6 mt-3 p-2 sm:p-3 md:p-4 bg-gray-50 rounded-md border border-gray-200">
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       List of allowed email addresses (one per line)
                     </label>
@@ -1235,7 +1425,7 @@ const CreateExam = () => {
                   </label>
 
                   {formData.time_limit_type === 'specified' && (
-                    <div className="ml-6 mt-2 flex items-center">
+                    <div className="ml-1 sm:ml-2 md:ml-6 mt-2 flex items-center flex-wrap gap-1 sm:gap-2">
                       <input
                         type="number"
                         name="duration_minutes"
@@ -1287,7 +1477,7 @@ const CreateExam = () => {
                   </label>
 
                   {formData.attempt_limit_type === 'limited' && (
-                    <div className="ml-6 mt-2 flex items-center">
+                    <div className="ml-1 sm:ml-2 md:ml-6 mt-2 flex items-center flex-wrap gap-1 sm:gap-2">
                       <input
                         type="number"
                         name="max_attempts"
@@ -1460,9 +1650,9 @@ const CreateExam = () => {
 
         {selectedQuestions.length > 0 ? (
           <div className="mb-6">
-            <div className="mb-5 p-4 bg-blue-50 rounded-lg border border-blue-100">
-              <h4 className="text-sm font-medium text-blue-700 mb-2">Quick Stats</h4>
-              <div className="flex flex-wrap gap-6">
+            <div className="mb-3 sm:mb-4 md:mb-5 p-3 sm:p-4 bg-blue-50 rounded-lg border border-blue-100">
+              <h4 className="text-sm font-medium text-blue-700 mb-1.5 sm:mb-2">Quick Stats</h4>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
                 <div className="flex items-center">
                   <span className="text-sm text-gray-600">Total Questions:</span>
                   <span className="ml-2 text-sm font-medium text-blue-700">{selectedQuestions.length}</span>
@@ -1474,14 +1664,14 @@ const CreateExam = () => {
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {selectedQuestions.map((question, index) => (
                 <div
                   key={question.id}
-                  className="p-4 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-blue-200 transition-colors"
+                  className="p-3 sm:p-4 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-blue-200 transition-colors"
                 >
-                  <div className="flex justify-between mb-3">
-                    <div className="flex items-center">
+                  <div className="flex flex-col sm:flex-row sm:justify-between mb-2 sm:mb-3 gap-2">
+                    <div className="flex flex-wrap items-center gap-1 sm:gap-2">
                       <span className="font-medium text-sm text-gray-700 mr-2 bg-gray-100 px-2 py-1 rounded-md">
                         Question {index + 1}
                       </span>
@@ -1497,7 +1687,7 @@ const CreateExam = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center">
+                    <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => moveQuestion(index, 'up')}
                         disabled={index === 0}
@@ -1582,7 +1772,7 @@ const CreateExam = () => {
           <span>Question Bank</span>
         </h3>
 
-        <div className="mb-5 flex flex-col sm:flex-row gap-4">
+        <div className="mb-3 sm:mb-4 md:mb-5 flex flex-col md:flex-row gap-3 sm:gap-4 flex-wrap">
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Search Questions
@@ -1601,7 +1791,7 @@ const CreateExam = () => {
             </div>
           </div>
 
-          <div className="sm:w-1/4">
+          <div className="w-full md:w-1/3 lg:w-1/4 mb-2 sm:mb-0">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Class
             </label>
@@ -1617,7 +1807,7 @@ const CreateExam = () => {
             </select>
           </div>
 
-          <div className="sm:w-1/4">
+          <div className="w-full md:w-1/3 lg:w-1/4 mb-2 sm:mb-0">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Subject
             </label>
@@ -1635,13 +1825,13 @@ const CreateExam = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
           {filteredQuestions.length > 0 ? (
             <div className="max-h-96 overflow-y-auto">
               {filteredQuestions.map(question => (
                 <div
                   key={question.id}
-                  className="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                  className="p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                 >
                   <div className="flex justify-between mb-3">
                     <div className="text-sm text-gray-800 flex-1">
@@ -1656,11 +1846,11 @@ const CreateExam = () => {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
-                    <div className="p-1.5 bg-gray-50 rounded">A: {question.option_a}</div>
-                    <div className="p-1.5 bg-gray-50 rounded">B: {question.option_b}</div>
-                    <div className="p-1.5 bg-gray-50 rounded">C: {question.option_c}</div>
-                    <div className="p-1.5 bg-gray-50 rounded">D: {question.option_d}</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-300">
+                    <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded">A: {question.option_a}</div>
+                    <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded">B: {question.option_b}</div>
+                    <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded">C: {question.option_c}</div>
+                    <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded">D: {question.option_d}</div>
                   </div>
                 </div>
               ))}
@@ -1679,7 +1869,17 @@ const CreateExam = () => {
   );
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 max-w-7xl bg-white min-h-screen">
+    <div className="container mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl bg-white dark:bg-gray-900 min-h-screen overflow-hidden">
+      <div className="max-w-full overflow-x-hidden">
+      <style>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
       {/* Breadcrumb Navigation */}
       <nav className="flex items-center mb-6 text-sm">
         <Link to="/exams" className="text-gray-500 hover:text-gray-700 flex items-center gap-1 transition-colors">
@@ -1689,7 +1889,7 @@ const CreateExam = () => {
       </nav>
 
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4 sm:mb-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">
             {isEditing ? 'Edit Exam' : 'Create New Exam'}
@@ -1699,11 +1899,11 @@ const CreateExam = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 self-end sm:self-auto mt-4 sm:mt-0">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 self-end md:self-auto mt-3 md:mt-0">
           <button
             type="button"
             onClick={() => navigate('/exams')}
-            className="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2"
+            className="px-3 sm:px-4 py-2 sm:py-2.5 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-1 sm:gap-2"
           >
             <FiX className="h-4 w-4" />
             <span>Cancel</span>
@@ -1713,7 +1913,7 @@ const CreateExam = () => {
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
+            className="px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-1 sm:gap-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
           >
             {isSubmitting ? (
               <>
@@ -1732,97 +1932,101 @@ const CreateExam = () => {
 
       <div className="mb-8">
         {/* Horizontal Tab Navigation */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="flex -mb-px overflow-x-auto">
-            <button
-              onClick={() => setActiveTab('details')}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
-                activeTab === 'details'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <FiInfo className="h-4 w-4" />
-              <span>Details & Curriculum</span>
-            </button>
+        <div className="border-b border-gray-200 mb-4 sm:mb-6">
+          <nav className="-mb-px overflow-x-auto pb-1">
+            <div className="inline-flex min-w-max w-full">
+              <div className="flex flex-nowrap overflow-x-auto w-full pb-1 hide-scrollbar space-x-1 md:space-x-2">
+                <button
+                  onClick={() => setActiveTab('details')}
+                  className={`flex items-center gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'details'
+                      ? 'border-b-2 border-blue-500 text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <FiInfo className="h-4 w-4" />
+                  <span>Details & Curriculum</span>
+                </button>
 
-            <button
-              onClick={() => setActiveTab('basic_settings')}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
-                activeTab === 'basic_settings'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <FiSettings className="h-4 w-4" />
-              <span>Basic Settings</span>
-            </button>
+                <button
+                  onClick={() => setActiveTab('basic_settings')}
+                  className={`flex items-center gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'basic_settings'
+                      ? 'border-b-2 border-blue-500 text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <FiSettings className="h-4 w-4" />
+                  <span>Basic Settings</span>
+                </button>
 
-            <button
-              onClick={() => setActiveTab('question_settings')}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
-                activeTab === 'question_settings'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <FiList className="h-4 w-4" />
-              <span>Question Settings</span>
-            </button>
+                <button
+                  onClick={() => setActiveTab('question_settings')}
+                  className={`flex items-center gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'question_settings'
+                      ? 'border-b-2 border-blue-500 text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <FiList className="h-4 w-4" />
+                  <span>Question Settings</span>
+                </button>
 
-            <button
-              onClick={() => setActiveTab('review_settings')}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
-                activeTab === 'review_settings'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <FiEye className="h-4 w-4" />
-              <span>Review Settings</span>
-            </button>
+                <button
+                  onClick={() => setActiveTab('review_settings')}
+                  className={`flex items-center gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'review_settings'
+                      ? 'border-b-2 border-blue-500 text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <FiEye className="h-4 w-4" />
+                  <span>Review Settings</span>
+                </button>
 
-            <button
-              onClick={() => setActiveTab('access_control')}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
-                activeTab === 'access_control'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <FiUsers className="h-4 w-4" />
-              <span>Access Control</span>
-            </button>
+                <button
+                  onClick={() => setActiveTab('access_control')}
+                  className={`flex items-center gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'access_control'
+                      ? 'border-b-2 border-blue-500 text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <FiUsers className="h-4 w-4" />
+                  <span>Access Control</span>
+                </button>
 
-            <button
-              onClick={() => setActiveTab('browser_settings')}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
-                activeTab === 'browser_settings'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <FiShield className="h-4 w-4" />
-              <span>Browser Settings</span>
-            </button>
+                <button
+                  onClick={() => setActiveTab('browser_settings')}
+                  className={`flex items-center gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'browser_settings'
+                      ? 'border-b-2 border-blue-500 text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <FiShield className="h-4 w-4" />
+                  <span>Browser Settings</span>
+                </button>
 
-            <button
-              onClick={() => setActiveTab('questions')}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
-                activeTab === 'questions'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <FiCheckCircle className="h-4 w-4" />
-              <span>Questions</span>
-            </button>
+                <button
+                  onClick={() => setActiveTab('questions')}
+                  className={`flex items-center gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'questions'
+                      ? 'border-b-2 border-blue-500 text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <FiCheckCircle className="h-4 w-4" />
+                  <span>Questions</span>
+                </button>
+              </div>
+            </div>
           </nav>
         </div>
 
         {/* Content Area */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
-          <div className="p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
+          <div className="p-3 sm:p-4 md:p-6 overflow-x-auto">
             {/* Tab Content */}
             <div>
               {activeTab === 'details' && renderDetailsTab()}
@@ -1836,6 +2040,7 @@ const CreateExam = () => {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 };

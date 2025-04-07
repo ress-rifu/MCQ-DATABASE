@@ -192,7 +192,7 @@ const EnhancedRichTextEditor = ({
         </div>
       )}
       
-      <style jsx>{`
+      <style>{`
         .enhanced-editor-container {
           width: 100%;
         }

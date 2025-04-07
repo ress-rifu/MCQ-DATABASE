@@ -75,10 +75,12 @@ const ExamPortal = () => {
   useEffect(() => {
     const fetchExam = async () => {
       try {
+        console.log('Fetching exam details for ID:', id);
         const response = await axios.get(`${API_BASE_URL}/api/exams/${id}`, {
           headers: getAuthHeader()
         });
 
+        console.log('Exam data received:', response.data);
         setExam(response.data);
 
         // Check if exam is active
@@ -89,45 +91,70 @@ const ExamPortal = () => {
         if (now < startDate) {
           toast.error('This exam has not started yet');
           navigate('/exams');
+          return;
         } else if (now > endDate) {
           toast.error('This exam has ended');
           navigate('/exams');
+          return;
         }
 
         // Check if user has an attempt already
+        console.log('Checking for existing attempt...');
         const attemptResponse = await axios.get(`${API_BASE_URL}/api/exams/${id}/attempt`, {
           headers: getAuthHeader()
         });
 
         if (attemptResponse.data) {
           // User has an attempt
+          console.log('Found existing attempt:', attemptResponse.data);
           const attempt = attemptResponse.data;
           setAttemptId(attempt.id);
 
           if (attempt.completed) {
+            console.log('Attempt is already completed');
             setExamFinished(true);
             setExamStarted(true);
           } else {
             // Resume attempt
+            console.log('Resuming incomplete attempt');
             setExamStarted(true);
-            setQuestions(response.data.questions);
+
+            // Make sure we have questions
+            if (response.data.questions && response.data.questions.length > 0) {
+              console.log('Setting questions:', response.data.questions.length, 'questions found');
+              setQuestions(response.data.questions);
+            } else {
+              console.warn('No questions found in exam data');
+              toast.error('This exam has no questions');
+            }
 
             // Load responses
-            const responsesObj = {};
-            attempt.responses.forEach(resp => {
-              responsesObj[resp.question_id] = resp.selected_option;
-            });
-            setResponses(responsesObj);
+            if (attempt.responses && attempt.responses.length > 0) {
+              console.log('Loading saved responses:', attempt.responses.length, 'responses found');
+              const responsesObj = {};
+              attempt.responses.forEach(resp => {
+                responsesObj[resp.question_id] = resp.selected_option;
+              });
+              setResponses(responsesObj);
+            }
 
             // Calculate time remaining
             const endTime = new Date(attempt.start_time);
             endTime.setMinutes(endTime.getMinutes() + response.data.duration_minutes);
             const remaining = Math.max(0, endTime - now);
             setTimeRemaining(Math.floor(remaining / 1000));
+            console.log('Time remaining:', Math.floor(remaining / 1000), 'seconds');
           }
         } else {
           // No attempt yet, show questions but don't start timer
-          setQuestions(response.data.questions);
+          console.log('No existing attempt found');
+          if (response.data.questions && response.data.questions.length > 0) {
+            console.log('Setting questions:', response.data.questions.length, 'questions found');
+            setQuestions(response.data.questions);
+          } else {
+            console.warn('No questions found in exam data');
+            toast.error('This exam has no questions');
+          }
         }
 
         setLoading(false);
@@ -162,10 +189,12 @@ const ExamPortal = () => {
   // Start the exam
   const startExam = async () => {
     try {
+      console.log('Starting exam:', id);
       const response = await axios.post(`${API_BASE_URL}/api/exams/${id}/start`, {}, {
         headers: getAuthHeader()
       });
 
+      console.log('Exam started successfully:', response.data);
       setAttemptId(response.data.id);
       setExamStarted(true);
 
@@ -181,6 +210,8 @@ const ExamPortal = () => {
 
   // Handle answer selection
   const handleAnswerSelect = async (questionId, option) => {
+    console.log('Selecting answer:', questionId, option);
+
     // Update local state
     setResponses(prev => ({
       ...prev,
@@ -189,13 +220,15 @@ const ExamPortal = () => {
 
     // Send to server
     try {
-      await axios.post(`${API_BASE_URL}/api/exams/${id}/response`, {
+      const response = await axios.post(`${API_BASE_URL}/api/exams/${id}/response`, {
         attempt_id: attemptId,
         question_id: questionId,
         selected_option: option
       }, {
         headers: getAuthHeader()
       });
+
+      console.log('Response saved successfully:', response.data);
     } catch (error) {
       console.error('Error saving response:', error);
 
@@ -228,13 +261,15 @@ const ExamPortal = () => {
     if (!examStarted || examFinished) return;
 
     try {
+      console.log('Submitting exam:', id, 'Attempt ID:', attemptId);
       setLoading(true);
-      await axios.post(`${API_BASE_URL}/api/exams/${id}/submit`, {
+      const response = await axios.post(`${API_BASE_URL}/api/exams/${id}/submit`, {
         attempt_id: attemptId
       }, {
         headers: getAuthHeader()
       });
 
+      console.log('Exam submitted successfully:', response.data);
       setExamFinished(true);
       toast.success('Exam submitted successfully!');
 

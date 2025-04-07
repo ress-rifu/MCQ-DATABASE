@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { API_URL, getAuthHeader } from '../apiConfig';
+import { API_BASE_URL, getAuthHeader } from '../apiConfig';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import LaTeXRenderer from '../components/LaTeXRenderer';
@@ -18,14 +18,14 @@ const ExamLeaderboard = () => {
     const fetchData = async () => {
       try {
         // Fetch exam details
-        const examResponse = await axios.get(`${API_URL}/api/exams/${id}`, {
+        const examResponse = await axios.get(`${API_BASE_URL}/api/exams/${id}`, {
           headers: getAuthHeader()
         });
 
         setExam(examResponse.data);
 
         // Fetch leaderboard
-        const leaderboardResponse = await axios.get(`${API_URL}/api/exams/${id}/leaderboard`, {
+        const leaderboardResponse = await axios.get(`${API_BASE_URL}/api/exams/${id}/leaderboard`, {
           headers: getAuthHeader()
         });
 

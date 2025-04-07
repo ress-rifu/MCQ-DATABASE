@@ -42,6 +42,10 @@ router.get('/count', authMiddleware, async (req, res) => {
 // Get all exams
 router.get('/', authMiddleware, async (req, res) => {
   try {
+    console.log('GET /api/exams request received');
+    console.log('User:', req.user ? `ID: ${req.user.id}, Role: ${req.user.role}` : 'Not authenticated');
+    console.log('Query params:', req.query);
+
     const { course_id, chapter_id } = req.query;
 
     let query = `
@@ -72,7 +76,20 @@ router.get('/', authMiddleware, async (req, res) => {
 
     query += ` ORDER BY e.created_at DESC`;
 
+    console.log('Executing query:', query);
+    console.log('Query params:', queryParams);
+
     const result = await pool.query(query, queryParams);
+    console.log(`Found ${result.rows.length} exams`);
+
+    if (result.rows.length === 0) {
+      console.log('No exams found. Checking if exams table has any records...');
+      const countResult = await pool.query('SELECT COUNT(*) FROM exams');
+      console.log(`Total exams in database: ${countResult.rows[0].count}`);
+    } else {
+      console.log('First exam ID:', result.rows[0].id);
+    }
+
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching exams:', error);
@@ -117,11 +134,17 @@ router.get('/:id', authMiddleware, async (req, res) => {
     const chaptersResult = await pool.query(chaptersQuery, [examId]);
     exam.chapters = chaptersResult.rows;
 
-    // Get exam questions
+    // Get exam questions with full details
     const questionsQuery = `
-      SELECT q.*, eq.marks, eq.question_order
+      SELECT q.id, q.ques, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option,
+             q.explanation, q.difficulty_level, q.reference, q.topic,
+             eq.marks, eq.question_order,
+             ch.name as chapter_name, s.name as subject_name, c.name as class_name
       FROM exam_questions eq
       JOIN questions q ON eq.question_id = q.id
+      LEFT JOIN chapters ch ON q.chapter_id = ch.id
+      LEFT JOIN subjects s ON ch.subject_id = s.id
+      LEFT JOIN classes c ON s.class_id = c.id
       WHERE eq.exam_id = $1
       ORDER BY eq.question_order
     `;
@@ -138,16 +161,29 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
 // Create new exam - Admin only
 router.post('/', authMiddleware, async (req, res) => {
+  console.log('Create exam request received');
+  console.log('User:', req.user);
+  console.log('Request body:', req.body);
   // Check if user is admin
+  console.log('Checking if user is admin:', req.user);
+  if (!req.user) {
+    console.log('No user found in request');
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+
   if (!isAdmin(req.user)) {
+    console.log('User is not admin, role:', req.user.role);
     return res.status(403).json({ message: 'Access denied. Only administrators can create exams.' });
   }
+
+  console.log('Admin check passed, proceeding with exam creation');
 
   const client = await pool.connect();
 
   try {
     // Get exam data from request body
     let examData = { ...req.body };
+    console.log('Exam data received:', examData);
 
     // Sanitize integer fields - convert empty strings to null
     const integerFields = ['course_id', 'negative_percentage', 'duration_minutes', 'total_marks', 'passing_score', 'max_attempts'];
@@ -156,6 +192,40 @@ router.post('/', authMiddleware, async (req, res) => {
         examData[field] = null;
       }
     });
+
+    // Ensure arrays are properly formatted
+    if (typeof examData.chapters === 'string') {
+      try {
+        examData.chapters = JSON.parse(examData.chapters);
+      } catch (e) {
+        examData.chapters = examData.chapters.split(',').map(id => parseInt(id.trim()));
+      }
+    }
+
+    if (typeof examData.questions === 'string') {
+      try {
+        examData.questions = JSON.parse(examData.questions);
+      } catch (e) {
+        console.error('Error parsing questions:', e);
+        examData.questions = [];
+      }
+    }
+
+    if (typeof examData.identifier_list === 'string') {
+      try {
+        examData.identifier_list = JSON.parse(examData.identifier_list);
+      } catch (e) {
+        examData.identifier_list = examData.identifier_list.split(',').map(id => id.trim());
+      }
+    }
+
+    if (typeof examData.email_list === 'string') {
+      try {
+        examData.email_list = JSON.parse(examData.email_list);
+      } catch (e) {
+        examData.email_list = examData.email_list.split(',').map(id => id.trim());
+      }
+    }
 
     const {
       // Basic exam info
@@ -188,6 +258,12 @@ router.post('/', authMiddleware, async (req, res) => {
     } = examData;
 
     await client.query('BEGIN');
+
+    console.log('Preparing to insert exam into database');
+    console.log('Title:', title);
+    console.log('Course ID:', course_id);
+    console.log('Chapters:', chapters);
+    console.log('Questions:', questions);
 
     // Create exam with all settings
     const examQuery = `
@@ -244,21 +320,42 @@ router.post('/', authMiddleware, async (req, res) => {
       disable_autocomplete, disable_spellcheck, disable_printing
     ];
 
-    const examResult = await client.query(examQuery, examValues);
-    const examId = examResult.rows[0].id;
+    // Exam insertion is now handled below
+
+    // Define examId variable outside the try block
+    let examId;
+
+    try {
+      console.log('Executing exam insert query with values:', examValues);
+      const examResult = await client.query(examQuery, examValues);
+      console.log('Exam inserted successfully');
+      examId = examResult.rows[0].id;
+      console.log('New exam ID:', examId);
+    } catch (insertError) {
+      console.error('Error inserting exam:', insertError);
+      throw insertError; // Re-throw to be caught by the outer catch block
+    }
 
     // Add chapters to exam
     if (chapters && chapters.length > 0) {
+      console.log('Adding chapters to exam:', chapters);
       for (const chapterId of chapters) {
-        await client.query(
-          'INSERT INTO exam_chapters (exam_id, chapter_id) VALUES ($1, $2)',
-          [examId, chapterId]
-        );
+        try {
+          await client.query(
+            'INSERT INTO exam_chapters (exam_id, chapter_id) VALUES ($1, $2)',
+            [examId, chapterId]
+          );
+          console.log('Added chapter', chapterId, 'to exam', examId);
+        } catch (chapterError) {
+          console.error('Error adding chapter', chapterId, 'to exam:', chapterError);
+          throw chapterError;
+        }
       }
     }
 
     // Add questions to exam
     if (questions && questions.length > 0) {
+      console.log('Adding questions to exam:', questions);
       const questionValues = questions.map((q, index) => {
         return [
           examId,
@@ -269,21 +366,56 @@ router.post('/', authMiddleware, async (req, res) => {
       });
 
       for (const qValues of questionValues) {
-        await client.query(
-          'INSERT INTO exam_questions (exam_id, question_id, marks, question_order) VALUES ($1, $2, $3, $4)',
-          qValues
-        );
+        try {
+          await client.query(
+            'INSERT INTO exam_questions (exam_id, question_id, marks, question_order) VALUES ($1, $2, $3, $4)',
+            qValues
+          );
+          console.log('Added question', qValues[1], 'to exam', examId, 'with marks', qValues[2]);
+        } catch (questionError) {
+          console.error('Error adding question to exam:', questionError);
+          throw questionError;
+        }
       }
+    } else {
+      console.log('No questions to add to exam');
     }
 
     await client.query('COMMIT');
+    console.log('Transaction committed successfully');
 
-    // Return created exam with questions
-    const newExam = examResult.rows[0];
-    newExam.questions = questions;
-    newExam.chapters = chapters;
+    // Fetch the created exam to return
+    try {
+      console.log('Fetching newly created exam with ID:', examId);
+      const fetchQuery = 'SELECT * FROM exams WHERE id = $1';
+      const fetchResult = await pool.query(fetchQuery, [examId]);
 
-    res.status(201).json(newExam);
+      if (fetchResult.rows.length === 0) {
+        console.error('Could not fetch the created exam');
+        res.status(500).json({ message: 'Exam was created but could not be retrieved' });
+        return;
+      }
+
+      // Return created exam with questions
+      const newExam = fetchResult.rows[0];
+      newExam.questions = questions;
+      newExam.chapters = chapters;
+
+      console.log('Successfully created exam:', newExam.id);
+      console.log('Exam details:', JSON.stringify(newExam, null, 2));
+
+      // Verify the exam is actually in the database with a separate connection
+      const verifyResult = await pool.query('SELECT COUNT(*) FROM exams WHERE id = $1', [examId]);
+      console.log(`Verification query shows ${verifyResult.rows[0].count} exams with ID ${examId}`);
+
+      res.status(201).json(newExam);
+    } catch (fetchError) {
+      console.error('Error fetching created exam:', fetchError);
+      res.status(201).json({
+        message: 'Exam was created successfully but details could not be retrieved',
+        id: examId
+      });
+    }
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error creating exam:', error);
@@ -636,6 +768,7 @@ router.get('/:id/attempt', authMiddleware, async (req, res) => {
 
 // Start exam attempt - Available to both students and admins
 router.post('/:id/start', authMiddleware, async (req, res) => {
+  console.log('Starting exam attempt for exam ID:', req.params.id, 'User:', req.user.id);
   const client = await pool.connect();
 
   try {
@@ -754,6 +887,7 @@ router.post('/:id/start', authMiddleware, async (req, res) => {
     const attemptId = attemptResult.rows[0].id;
 
     // Get questions for this exam
+    console.log('Getting questions for exam ID:', examId);
     const questionsQuery = `
       SELECT q.id, eq.question_order, eq.marks
       FROM exam_questions eq
@@ -766,7 +900,9 @@ router.post('/:id/start', authMiddleware, async (req, res) => {
     const questions = questionsResult.rows;
 
     // Create empty responses for each question
+    console.log('Creating empty responses for', questions.length, 'questions');
     for (const question of questions) {
+      console.log('Creating response for question ID:', question.id);
       await client.query(
         'INSERT INTO exam_responses (exam_attempt_id, question_id) VALUES ($1, $2)',
         [attemptId, question.id]
@@ -845,9 +981,14 @@ router.post('/response', authMiddleware, async (req, res) => {
 
 // Submit response for specific exam - Available to both students and admins
 router.post('/:id/response', authMiddleware, async (req, res) => {
+  console.log('Submitting response for exam ID:', req.params.id, 'User:', req.user.id, 'Data:', req.body);
   try {
     const { attempt_id, question_id, selected_option } = req.body;
     const examId = req.params.id;
+
+    if (!attempt_id || !question_id || !selected_option) {
+      return res.status(400).json({ message: 'Missing required fields: attempt_id, question_id, or selected_option' });
+    }
 
     // Verify that this attempt belongs to the current user and to the specified exam
     const verifyQuery = `
@@ -858,6 +999,7 @@ router.post('/:id/response', authMiddleware, async (req, res) => {
     `;
 
     const verifyResult = await pool.query(verifyQuery, [attempt_id, req.user.id, examId]);
+    console.log('Verify result:', verifyResult.rows);
 
     if (verifyResult.rows.length === 0) {
       return res.status(403).json({ message: 'Unauthorized' });
@@ -881,16 +1023,41 @@ router.post('/:id/response', authMiddleware, async (req, res) => {
       }
     }
 
-    // Update response
-    const responseQuery = `
-      UPDATE exam_responses
-      SET selected_option = $1, updated_at = NOW()
-      WHERE exam_attempt_id = $2 AND question_id = $3
-      RETURNING *
+    // Check if response exists
+    const checkExistsQuery = `
+      SELECT * FROM exam_responses
+      WHERE exam_attempt_id = $1 AND question_id = $2
     `;
 
-    const responseResult = await pool.query(responseQuery, [selected_option, attempt_id, question_id]);
+    const existsResult = await pool.query(checkExistsQuery, [attempt_id, question_id]);
+    console.log('Exists check result:', existsResult.rows);
 
+    let responseResult;
+
+    if (existsResult.rows.length > 0) {
+      // Update existing response
+      console.log('Updating existing response');
+      const responseQuery = `
+        UPDATE exam_responses
+        SET selected_option = $1, updated_at = NOW()
+        WHERE exam_attempt_id = $2 AND question_id = $3
+        RETURNING *
+      `;
+
+      responseResult = await pool.query(responseQuery, [selected_option, attempt_id, question_id]);
+    } else {
+      // Create new response
+      console.log('Creating new response');
+      const responseQuery = `
+        INSERT INTO exam_responses (exam_attempt_id, question_id, selected_option)
+        VALUES ($1, $2, $3)
+        RETURNING *
+      `;
+
+      responseResult = await pool.query(responseQuery, [attempt_id, question_id, selected_option]);
+    }
+
+    console.log('Response saved:', responseResult.rows[0]);
     res.json(responseResult.rows[0]);
   } catch (error) {
     console.error('Error submitting response:', error);
@@ -900,6 +1067,7 @@ router.post('/:id/response', authMiddleware, async (req, res) => {
 
 // Submit exam - Available to both students and admins
 router.post('/:id/submit', authMiddleware, async (req, res) => {
+  console.log('Submitting exam ID:', req.params.id, 'User:', req.user.id, 'Data:', req.body);
   const client = await pool.connect();
 
   try {
@@ -957,9 +1125,10 @@ router.post('/:id/submit', authMiddleware, async (req, res) => {
     }
 
     // Calculate score
+    console.log('Calculating score for attempt:', attempt.id);
     const responsesQuery = `
       SELECT er.id, er.question_id, er.selected_option,
-             q.answer, eq.marks
+             q.correct_option, eq.marks
       FROM exam_responses er
       JOIN questions q ON er.question_id = q.id
       JOIN exam_questions eq ON er.question_id = eq.question_id AND eq.exam_id = $1
@@ -968,12 +1137,23 @@ router.post('/:id/submit', authMiddleware, async (req, res) => {
 
     const responsesResult = await client.query(responsesQuery, [examId, attempt.id]);
     const responses = responsesResult.rows;
+    console.log('Found', responses.length, 'responses to score');
 
     let totalScore = 0;
+    let totalMarks = 0;
 
     for (const response of responses) {
-      const isCorrect = response.selected_option === response.answer;
+      const isCorrect = response.selected_option === response.correct_option;
       let marksObtained = 0;
+      totalMarks += response.marks;
+
+      console.log(
+        'Question ID:', response.question_id,
+        'Selected:', response.selected_option,
+        'Correct:', response.correct_option,
+        'Is Correct:', isCorrect,
+        'Marks:', response.marks
+      );
 
       if (isCorrect) {
         // Correct answer gets full marks
@@ -982,11 +1162,13 @@ router.post('/:id/submit', authMiddleware, async (req, res) => {
         // Apply negative marking if answer is wrong and negative marking is enabled
         // Use the negative_percentage from exam settings
         marksObtained = -(response.marks * (exam.negative_percentage / 100));
+        console.log('Applied negative marking:', marksObtained);
       } else if (!response.selected_option && !exam.allow_blank_answers) {
         // If blank answers are not allowed, treat them as wrong answers
         // with negative marking if enabled
         if (exam.negative_marking) {
           marksObtained = -(response.marks * (exam.negative_percentage / 100));
+          console.log('Applied negative marking for blank answer:', marksObtained);
         }
       }
 
@@ -998,6 +1180,8 @@ router.post('/:id/submit', authMiddleware, async (req, res) => {
 
       totalScore += marksObtained;
     }
+
+    console.log('Total score:', totalScore, 'out of', totalMarks);
 
     // Cap minimum score at 0 if goes negative due to negative marking
     if (totalScore < 0) totalScore = 0;
