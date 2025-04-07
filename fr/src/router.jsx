@@ -5,6 +5,7 @@ import {
 import MainStructure from './MainStructure';
 import Overview from './Pages/Overview';
 import Upload from './Pages/Upload';
+import UploadTest from './Pages/UploadTest';
 import QuestionBank from './Pages/QuestionBank';
 import MyQuestion from './Pages/MyQuestion';
 import Users from './Pages/Users';
@@ -15,6 +16,9 @@ import ExamsList from './Pages/ExamsList';
 import ExamPortal from './Pages/ExamPortal';
 import ExamLeaderboard from './Pages/ExamLeaderboard';
 import StudentLeaderboard from './Pages/StudentLeaderboard';
+import TailwindTest from './components/TailwindTest';
+import TailwindShowcase from './components/TailwindShowcase';
+import UntitledUIShowcase from './Pages/UntitledUIShowcase';
 import PrivateRoute from './Authentications/PrivateRoute';
 import Login from './Login/Login';
 import { RouteErrorBoundary } from './components/ErrorBoundary';
@@ -34,6 +38,21 @@ const withAuth = (Component) => {
 };
 
 const router = createBrowserRouter([
+    {
+        path: "/tailwind",
+        element: <TailwindTest />,
+        errorElement: <RouteErrorBoundary />,
+    },
+    {
+        path: "/tailwind-showcase",
+        element: <TailwindShowcase />,
+        errorElement: <RouteErrorBoundary />,
+    },
+    {
+        path: "/ui",
+        element: <UntitledUIShowcase />,
+        errorElement: <RouteErrorBoundary />,
+    },
     {
         path: "/",
         element: withAuth(<PrivateRoute><MainStructure /></PrivateRoute>),
@@ -55,7 +74,17 @@ const router = createBrowserRouter([
             },
             {
                 path:"/upload" ,
-                element: <Upload></Upload>,
+                element: <UploadTest></UploadTest>,
+                errorElement: <RouteErrorBoundary />,
+            },
+            {
+                path:"/tailwind-test" ,
+                element: <TailwindTest />,
+                errorElement: <RouteErrorBoundary />,
+            },
+            {
+                path:"/upload-test" ,
+                element: <UploadTest></UploadTest>,
                 errorElement: <RouteErrorBoundary />,
             },
             {

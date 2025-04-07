@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { FiPlus } from 'react-icons/fi';
 import { AiOutlineBook, AiOutlineClockCircle, AiOutlineQuestionCircle, AiOutlineTrophy } from 'react-icons/ai';
+import { API_URL, getAuthHeader } from '../apiConfig';
 
 const Exams = () => {
   const [exams, setExams] = useState([]);
@@ -16,12 +17,12 @@ const Exams = () => {
 
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     const fetchExams = async () => {
       try {
         setLoading(true);
-        
+
         // Build query parameters
         const params = new URLSearchParams();
         if (selectedCourse) {
@@ -30,11 +31,11 @@ const Exams = () => {
         if (selectedChapter) {
           params.append('chapter_id', selectedChapter);
         }
-        
+
         const response = await axios.get(`${API_URL}/api/exams?${params.toString()}`, {
           headers: getAuthHeader()
         });
-        
+
         setExams(response.data);
         setError(null);
       } catch (err) {
@@ -44,10 +45,10 @@ const Exams = () => {
         setLoading(false);
       }
     };
-    
+
     fetchExams();
   }, [selectedCourse, selectedChapter]);
-  
+
   // Fetch courses and chapters
   useEffect(() => {
     const fetchCurriculumData = async () => {
@@ -57,14 +58,14 @@ const Exams = () => {
           headers: getAuthHeader()
         });
         setCourses(coursesResponse.data);
-        
+
         // If a course is selected, fetch its chapters
         if (selectedCourse) {
           const courseContentResponse = await axios.get(
-            `${API_URL}/api/courses/${selectedCourse}/content`, 
+            `${API_URL}/api/courses/${selectedCourse}/content`,
             { headers: getAuthHeader() }
           );
-          
+
           // Filter for chapter content only
           const chapters = courseContentResponse.data
             .filter(item => item.chapter_id)
@@ -74,7 +75,7 @@ const Exams = () => {
               subject_name: item.subject_name,
               class_name: item.class_name
             }));
-          
+
           setAvailableChapters(chapters);
         } else {
           setAvailableChapters([]);
@@ -83,32 +84,32 @@ const Exams = () => {
         console.error('Error fetching curriculum data:', error);
       }
     };
-    
+
     fetchCurriculumData();
   }, [selectedCourse]);
-  
+
   const handleCourseChange = (e) => {
     const courseId = e.target.value;
     setSelectedCourse(courseId);
     setSelectedChapter(''); // Reset chapter selection when course changes
   };
-  
+
   const handleChapterChange = (e) => {
     setSelectedChapter(e.target.value);
   };
-  
+
   const clearFilters = () => {
     setSelectedCourse('');
     setSelectedChapter('');
   };
-  
+
   const canCreateExam = user && (user.role === 'admin' || user.role === 'teacher');
-  
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Exams</h1>
-        
+
         {canCreateExam && (
           <button
             onClick={() => navigate('/exams/create')}
@@ -119,7 +120,7 @@ const Exams = () => {
           </button>
         )}
       </div>
-      
+
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
         <h2 className="text-lg font-medium mb-4">Filters</h2>
@@ -139,7 +140,7 @@ const Exams = () => {
               ))}
             </select>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Chapter
@@ -158,7 +159,7 @@ const Exams = () => {
               ))}
             </select>
           </div>
-          
+
           <div className="flex items-end">
             <button
               onClick={clearFilters}
@@ -169,7 +170,7 @@ const Exams = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Exams List */}
       {loading ? (
         <div className="text-center p-8">
@@ -185,8 +186,8 @@ const Exams = () => {
           <FiFileText className="mx-auto text-gray-400 text-5xl mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No Exams Found</h3>
           <p className="text-gray-500 mb-4">
-            {selectedCourse || selectedChapter ? 
-              'No exams match your selected filters.' : 
+            {selectedCourse || selectedChapter ?
+              'No exams match your selected filters.' :
               'There are no exams available at the moment.'}
           </p>
           {(selectedCourse || selectedChapter) && (
@@ -213,7 +214,7 @@ const Exams = () => {
 const ExamCard = ({ exam }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   // Check if exam is active
   const now = new Date();
   const start = new Date(exam.start_datetime);
@@ -221,44 +222,44 @@ const ExamCard = ({ exam }) => {
   const isActive = now >= start && now <= end;
   const isUpcoming = now < start;
   const isCompleted = now > end;
-  
+
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
-  
+
   return (
-    <div 
+    <div
       className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 hover:shadow-md transition-shadow"
     >
       <div className="p-6">
         <div className="flex justify-between items-start mb-3">
-          <h3 
+          <h3
             className="text-lg font-medium text-gray-900 hover:text-blue-600 cursor-pointer"
             onClick={() => navigate(`/exams/${exam.id}`)}
           >
             {exam.title}
           </h3>
-          
+
           {isActive && (
             <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
               Active
             </span>
           )}
-          
+
           {isUpcoming && (
             <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
               Upcoming
             </span>
           )}
-          
+
           {isCompleted && (
             <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
               Completed
             </span>
           )}
         </div>
-        
+
         <div className="text-gray-500 text-sm mb-4">
           {exam.description ? (
             <p className="line-clamp-2">{exam.description}</p>
@@ -266,7 +267,7 @@ const ExamCard = ({ exam }) => {
             <p className="italic">No description available</p>
           )}
         </div>
-        
+
         <div className="grid grid-cols-2 gap-2 mb-4">
           <div>
             <p className="text-sm text-gray-500">Start:</p>
@@ -277,29 +278,29 @@ const ExamCard = ({ exam }) => {
             <p className="text-sm font-medium">{formatDate(exam.end_datetime)}</p>
           </div>
         </div>
-        
+
         <div className="flex flex-col space-y-2">
           <div className="flex items-center">
             <AiOutlineBook className="text-gray-400 mr-2" />
             <span className="text-sm">Course: {exam.course_name || 'N/A'}</span>
           </div>
-          
+
           <div className="flex items-center">
             <AiOutlineClockCircle className="text-gray-400 mr-2" />
             <span className="text-sm">Duration: {exam.duration_minutes} minutes</span>
           </div>
-          
+
           <div className="flex items-center">
             <AiOutlineQuestionCircle className="text-gray-400 mr-2" />
             <span className="text-sm">Questions: {exam.question_count || 0}</span>
           </div>
-          
+
           <div className="flex items-center">
             <AiOutlineTrophy className="text-gray-400 mr-2" />
             <span className="text-sm">Total Marks: {exam.total_marks}</span>
           </div>
         </div>
-        
+
         <div className="mt-5 pt-4 border-t border-gray-100 flex justify-end">
           <button
             onClick={() => navigate(`/exams/${exam.id}`)}
@@ -313,4 +314,4 @@ const ExamCard = ({ exam }) => {
   );
 };
 
-export default Exams; 
+export default Exams;

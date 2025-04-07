@@ -9,17 +9,9 @@ const pool = require('./db');
 const multer = require('multer');
 const xlsx = require('xlsx');
 const mammoth = require('mammoth');
+const { getCorsConfig } = require('./cors-config');
 
-// Load environment variables
-// First try to load from parent directory
-try {
-    dotenv.config({ path: path.resolve(__dirname, '../.env') });
-    console.log('Loaded CORS settings from root .env file');
-} catch (error) {
-    console.warn('Could not load root .env file:', error.message);
-}
-// Then load local .env (which will override duplicates)
-dotenv.config();
+// Load environment variables handled by cors-config.js
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -41,15 +33,11 @@ const studentRoutes = require('./routes/student');
 
 const app = express();
 
-// Parse CORS origins from environment variable
-const corsOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [];
-const corsCredentials = process.env.CORS_CREDENTIALS === 'true';
+// Get CORS configuration from shared module
+const corsConfig = getCorsConfig();
 
 // Middleware
-app.use(cors({
-    origin: corsOrigins.length > 0 ? corsOrigins : true,
-    credentials: corsCredentials
-}));
+app.use(cors(corsConfig));
 app.use(express.json());
 app.use(morgan('dev'));
 
@@ -425,14 +413,14 @@ app.use('/api/csv/template', (req, res) => {
 app.use('/api', apiRoutes);
 
 // Routes - some without authentication for testing
-app.use('/api/questions', questionsRoute);
+app.use('/api/questions', authMiddleware, questionsRoute);
 app.use('/api/users', authMiddleware, userRoutes);
-app.use('/api/curriculum', curriculumRoutes);
-app.use('/api/activity', activityRoutes);
+app.use('/api/curriculum', authMiddleware, curriculumRoutes);
+app.use('/api/activity', authMiddleware, activityRoutes);
 app.use('/api/docx', authMiddleware, docxUploadRoutes);
-app.use('/api/courses', coursesRoutes);
+app.use('/api/courses', authMiddleware, coursesRoutes);
 app.use('/api/exams', authMiddleware, examsRoutes);
-app.use('/api/student', studentRoutes);
+app.use('/api/student', authMiddleware, studentRoutes);
 
 // Add a global error handler
 app.use((err, req, res, next) => {

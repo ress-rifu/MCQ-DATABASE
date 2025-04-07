@@ -356,6 +356,7 @@ router.get("/recent-questions", authenticateToken, async (req, res) => {
 router.get("/stats", async (req, res) => {
   try {
     console.log("Fetching dashboard statistics");
+    console.log("User in request:", req.user ? `ID: ${req.user.id}, Role: ${req.user.role}` : 'Not authenticated');
 
     // Get total questions
     const totalQuestionsResult = await pool.query("SELECT COUNT(*) FROM questions");
@@ -386,34 +387,53 @@ router.get("/stats", async (req, res) => {
 
     // Get questions uploaded by current user
     let userUploads = 0;
+    // Check if user is authenticated and has an ID
     if (req.user && req.user.id) {
-      const userUploadsResult = await pool.query(
-        'SELECT COUNT(*) FROM questions WHERE created_by = $1',
-        [req.user.id]
-      );
-      userUploads = parseInt(userUploadsResult.rows[0].count) || 0;
+      try {
+        const userUploadsResult = await pool.query(
+          'SELECT COUNT(*) FROM questions WHERE created_by = $1',
+          [req.user.id]
+        );
+        userUploads = parseInt(userUploadsResult.rows[0].count) || 0;
+      } catch (userError) {
+        console.error('Error getting user uploads:', userError);
+        // Continue with userUploads = 0
+      }
     }
 
-    console.log("Dashboard stats:", {
+    // Prepare response data
+    const responseData = {
       totalQuestions,
       totalSubjects,
       totalChapters,
       totalTopics,
       monthlyUploads,
       userUploads
-    });
+    };
 
-    res.json({
-      totalQuestions,
-      totalSubjects,
-      totalChapters,
-      totalTopics,
-      monthlyUploads,
-      userUploads
-    });
+    console.log("Dashboard stats:", responseData);
+
+    // Send successful response
+    res.json(responseData);
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
-    res.status(500).json({ message: "Error fetching dashboard statistics" });
+    console.error("Error details:", {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
+
+    // Return default values instead of error to prevent UI breakage
+    res.json({
+      totalQuestions: 0,
+      totalSubjects: 0,
+      totalChapters: 0,
+      totalTopics: 0,
+      monthlyUploads: 0,
+      userUploads: 0,
+      error: error.message
+    });
   }
 });
 

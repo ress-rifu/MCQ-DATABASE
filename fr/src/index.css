@@ -1,295 +1,201 @@
-@import "tailwindcss";
-@plugin "daisyui" {
-  themes: light --default, forest --prefersdark;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Set system default fonts */
-html, body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  overflow-x: hidden;
-}
-
-/* Global responsive styles */
-.responsive-container {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-/* Make all tables responsive */
-table {
-  width: 100%;
-  display: table;
-  border-collapse: separate;
-  text-indent: 0;
-  border-color: inherit;
-  border-spacing: 0;
-}
-
-/* Table container for horizontal scrolling */
-.table-container {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Responsive images */
-img {
-  max-width: 100%;
-  height: auto;
-}
-
-@custom-variant dark (&:where([data-theme=forest], [data-theme=forest] *));
-
-/* LaTeX Rendering Styles */
-.latex-content {
-  margin: 0.5rem 0;
-  overflow-x: auto;
-}
-
-.latex-content .katex-display {
-  margin: 0.5rem 0;
-  overflow-x: auto;
-}
-
-.latex-table {
-  margin: 1rem 0;
-  overflow-x: auto;
-}
-
-/* Specific styling for longtable environments */
-.katex-longtable-wrapper {
-  margin: 1rem 0;
-  overflow-x: auto;
-  max-width: 100%;
-  width: 100%;
-}
-
-.katex-longtable-wrapper .katex {
-  text-align: center;
-  font-size: 0.95em; /* Slightly smaller than normal text for better fit */
-}
-
-.katex-longtable-wrapper .katex-html {
-  white-space: normal; /* Allow line breaks for better mobile display */
-}
-
-/* Improved longtable container styling */
-.longtable-container {
-  padding: 1rem;
-  background-color: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  margin: 1rem 0;
-}
-
-/* Simple table fallback when KaTeX can't render */
-.simple-table-fallback {
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-/* Direct LaTeX table rendering - the most reliable fallback method */
-.direct-latex-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 0.5rem 0;
-  font-size: 1rem;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-.direct-latex-table th {
-  background-color: #f1f5f9;
-  font-weight: 600;
-  padding: 0.75rem;
-  text-align: center;
-  border: 1px solid #e2e8f0;
-}
-
-.direct-latex-table td {
-  padding: 0.75rem;
-  text-align: center;
-  border: 1px solid #e2e8f0;
-}
-
-.direct-latex-table tr:nth-child(even) {
-  background-color: #f8fafc;
-}
-
-.simple-latex-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 1rem 0;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-.simple-latex-table td,
-.simple-latex-table th {
-  border: 1px solid #e5e7eb;
-  padding: 0.625rem;
-  text-align: center;
-}
-
-.simple-latex-table tr:nth-child(even) {
-  background-color: #f9fafb;
-}
-
-.simple-latex-table tr:hover {
-  background-color: #f3f4f6;
-}
-
-.longtable-container .katex {
-  font-size: 1em !important;
-  max-width: 100%;
-}
-
-.longtable-container table {
-  margin: 0 auto;
-  border-collapse: collapse;
-  border-spacing: 0;
-  width: auto;
-  max-width: 100%;
-}
-
-.longtable-container td,
-.longtable-container th {
-  padding: 0.5rem 1rem;
-  text-align: center;
-  border: 1px solid #e5e7eb;
-}
-
-/* Styling for elements containing LaTeX tables */
-.has-latex-table {
-  overflow-x: auto;
-  padding-bottom: 1rem;
-  max-width: 100%;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
-}
-
-.has-latex-table::-webkit-scrollbar {
-  height: 6px;
-}
-
-.has-latex-table::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.has-latex-table::-webkit-scrollbar-thumb {
-  background-color: rgba(156, 163, 175, 0.5);
-  border-radius: 3px;
-}
-
-/* Special styling for components containing longtables */
-.contains-longtable {
-  padding: 1rem;
-  border-radius: 0.5rem;
-  background-color: #fcfcfc;
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.contains-longtable .katex {
-  font-size: 0.95em;
-}
-
-.katex-environment-wrapper {
-  margin: 1rem 0;
-  overflow-x: auto;
-  max-width: 100%;
-}
-
-/* Make LaTeX tables visually appealing */
-.katex table {
-  border-collapse: collapse;
-  margin: 0 auto;
-  max-width: 100%;
-}
-
-.katex th, .katex td {
-  border: 1px solid #e5e7eb;
-  padding: 0.5rem;
-}
-
-.katex thead th {
-  background-color: #f3f4f6;
-  font-weight: 600;
-}
-
-.katex tbody tr:nth-child(even) {
-  background-color: #f9fafb;
-}
-
-/* Ensure that LaTeX content is responsive */
-@media (max-width: 640px) {
-  .latex-content,
-  .latex-table,
-  .katex-display {
-    font-size: 0.875rem;
+/* CSS Reset and Base Styles - Untitled UI */
+@layer base {
+  html {
+    @apply text-gray-900 bg-gray-50;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    @apply m-0 p-0 min-h-screen font-sans text-gray-700;
+  }
+  h1 {
+    @apply text-3xl font-semibold text-gray-900 tracking-tight;
+  }
+  h2 {
+    @apply text-2xl font-semibold text-gray-900 tracking-tight;
+  }
+  h3 {
+    @apply text-xl font-semibold text-gray-900 tracking-tight;
+  }
+  h4 {
+    @apply text-lg font-semibold text-gray-900;
+  }
+  h5 {
+    @apply text-base font-semibold text-gray-900;
+  }
+  p {
+    @apply text-gray-600 leading-relaxed;
+  }
+  a {
+    @apply text-primary-600 hover:text-primary-700 font-medium;
+  }
+  button {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2;
+  }
+  input, select, textarea {
+    @apply block w-full px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-xs text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 sm:text-sm;
+  }
+  label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
   }
 }
 
-/* Backdrop blur cross-browser support */
-.backdrop-blur {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 40;
-  background-color: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-/* For browsers not supporting backdrop-filter */
-@supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
-  .backdrop-blur {
-    background-color: rgba(0, 0, 0, 0.6);
+/* Custom styles that extend Tailwind - Untitled UI */
+@layer components {
+  /* Notification animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-}
 
-/* Modal content z-index */
-.modal-content-animate {
-  position: relative;
-  z-index: 50;
-}
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg shadow-xs transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
 
-/* Glass morphism effect with background blur */
-.glass-morphism {
-  @apply bg-white/60 dark:bg-black/60 backdrop-blur-xl border border-white/30 dark:border-gray-800/30;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-600;
+  }
 
-/* Basic transitions */
-.transition-colors {
-  transition-property: color, background-color, border-color;
-  transition-duration: 200ms;
-}
+  .btn-secondary {
+    @apply bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-primary-600;
+  }
 
-.transition-all {
-  transition-property: all;
-  transition-duration: 200ms;
-}
+  .btn-error {
+    @apply bg-error-600 text-white hover:bg-error-700 focus:ring-error-600;
+  }
 
-/* Custom focus styles */
-.apple-focus-ring:focus-visible {
-  @apply outline-none ring-2 ring-blue-500/50 ring-offset-2 ring-offset-white dark:ring-offset-black;
-}
+  .btn-success {
+    @apply bg-success-600 text-white hover:bg-success-700 focus:ring-success-600;
+  }
 
-/* Subtle shadow effects */
-.subtle-shadow {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
+  .btn-warning {
+    @apply bg-warning-600 text-white hover:bg-warning-700 focus:ring-warning-600;
+  }
 
-.dark .subtle-shadow {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-}
+  .btn-sm {
+    @apply px-3 py-2 text-xs;
+  }
 
-/* Fallback for browsers that don't support backdrop-filter */
-@supports not (backdrop-filter: blur(20px)) {
-  .glass-morphism {
-    @apply bg-white/90 dark:bg-black/90;
+  .btn-lg {
+    @apply px-5 py-3 text-base;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden;
+  }
+
+  .card-header {
+    @apply px-6 py-5 border-b border-gray-200;
+  }
+
+  .card-body {
+    @apply p-6;
+  }
+
+  .card-footer {
+    @apply px-6 py-4 border-t border-gray-200;
+  }
+
+  /* Notifications */
+  .notification {
+    @apply p-4 mb-6 rounded-lg font-medium shadow-md animate-[fadeIn_0.3s_ease-in-out] flex items-center gap-3;
+  }
+
+  .notification.success {
+    @apply bg-success-50 text-success-700 border border-success-200;
+  }
+
+  .notification.error {
+    @apply bg-error-50 text-error-700 border border-error-200;
+  }
+
+  .notification.warning {
+    @apply bg-warning-50 text-warning-700 border border-warning-200;
+  }
+
+  /* Step navigation custom styling */
+  .step:not(:last-child):after {
+    content: '';
+    @apply absolute top-1/2 right-[-10px] -translate-y-1/2 w-5 h-5 z-10;
+    clip-path: polygon(0 50%, 50% 0, 50% 100%);
+    background-color: inherit;
+  }
+
+  /* Table styles */
+  .preview-table {
+    @apply w-full border-collapse border border-gray-200 rounded-lg overflow-hidden;
+  }
+
+  .preview-table th,
+  .preview-table td {
+    @apply p-4 border-b border-gray-200 text-left;
+  }
+
+  .preview-table th {
+    @apply bg-gray-50 font-medium text-gray-700;
+  }
+
+  .preview-table tr:last-child td {
+    @apply border-b-0;
+  }
+
+  .preview-table tr:nth-child(even) {
+    @apply bg-gray-50;
+  }
+
+  .preview-table tr:hover {
+    @apply bg-gray-100;
+  }
+
+  /* Form elements */
+  .form-group {
+    @apply mb-6;
+  }
+
+  .input-addon-left {
+    @apply absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500;
+  }
+
+  .input-addon-right {
+    @apply absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-500;
+  }
+
+  .input-with-addon-left {
+    @apply pl-10;
+  }
+
+  .input-with-addon-right {
+    @apply pr-10;
+  }
+
+  /* Badge styles */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-primary {
+    @apply bg-primary-50 text-primary-700 border border-primary-200;
+  }
+
+  .badge-gray {
+    @apply bg-gray-100 text-gray-700 border border-gray-200;
+  }
+
+  .badge-error {
+    @apply bg-error-50 text-error-700 border border-error-200;
+  }
+
+  .badge-warning {
+    @apply bg-warning-50 text-warning-700 border border-warning-200;
+  }
+
+  .badge-success {
+    @apply bg-success-50 text-success-700 border border-success-200;
   }
 }

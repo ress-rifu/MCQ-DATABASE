@@ -27,12 +27,12 @@ const Sidebar = () => {
             navigate('/login');
         }
 
-        // Check if dark mode is enabled in localStorage or user preference
-        const darkModePreference = localStorage.getItem('darkMode') === 'true' ||
-            window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-        setIsDarkMode(darkModePreference);
-        document.documentElement.classList.toggle('dark', darkModePreference);
+        // Force light mode as default
+        setIsDarkMode(false);
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem('darkMode', 'false');
     }, [navigate]);
 
     // Close mobile sidebar when route changes
@@ -96,13 +96,13 @@ const Sidebar = () => {
         return (
             <Link
                 to={to}
-                className={`group flex items-center ${collapsed ? 'justify-center' : 'justify-start'} gap-2 px-3 py-2 my-1 rounded-md text-sm ${
+                className={`group flex items-center ${collapsed ? 'justify-center' : 'justify-start'} gap-3 px-3 py-2.5 my-1 rounded-lg text-sm ${
                     isActive
-                        ? 'bg-gray-100 dark:bg-gray-800 text-blue-600 dark:text-blue-400 font-medium'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
+                        ? 'bg-primary-50 text-primary-700 font-medium'
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                 }`}
             >
-                <span className={`flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>{icon}</span>
+                <span className={`flex-shrink-0 ${isActive ? 'text-primary-600' : 'text-gray-500'}`}>{icon}</span>
                 {!collapsed && (
                     <span className="truncate">
                         {label}
@@ -141,14 +141,14 @@ const Sidebar = () => {
             <div className="nav-dropdown">
                 <button
                     onClick={() => toggleExpandMenu(id)}
-                    className={`group w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between'} gap-2 px-3 py-2 my-1 rounded-md text-sm ${
+                    className={`group w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between'} gap-3 px-3 py-2.5 my-1 rounded-lg text-sm ${
                         isActive
-                            ? 'bg-gray-100 dark:bg-gray-800 text-blue-600 dark:text-blue-400 font-medium'
-                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
+                            ? 'bg-primary-50 text-primary-700 font-medium'
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                 >
-                    <div className="flex items-center gap-2">
-                        <span className={`flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>{icon}</span>
+                    <div className="flex items-center gap-3">
+                        <span className={`flex-shrink-0 ${isActive ? 'text-primary-600' : 'text-gray-500'}`}>{icon}</span>
                         {!collapsed && <span className="truncate">{label}</span>}
                     </div>
                     {!collapsed && (
@@ -161,7 +161,7 @@ const Sidebar = () => {
                 <div
                     className={`overflow-hidden transition-all duration-200 ease-in-out ${
                         isExpanded ? 'max-h-60 opacity-100 mt-1' : 'max-h-0 opacity-0'
-                    } ${collapsed ? 'hidden' : 'ml-6 border-l border-gray-200 dark:border-gray-700 pl-2'}`}
+                    } ${collapsed ? 'hidden' : 'ml-7 border-l border-gray-200 pl-3'}`}
                 >
                     {React.Children.map(children, child =>
                         React.cloneElement(child, { isDropdownItem: true })
@@ -170,8 +170,8 @@ const Sidebar = () => {
 
                 {/* Collapsed dropdown items in popup */}
                 {collapsed && isExpanded && (
-                    <div className="absolute left-full top-0 ml-2 bg-white dark:bg-gray-800 shadow-lg rounded-md p-2 z-50 min-w-40 border border-gray-200 dark:border-gray-700">
-                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 py-1 mb-1">{label}</div>
+                    <div className="absolute left-full top-0 ml-2 bg-white shadow-md rounded-lg p-3 z-50 min-w-48 border border-gray-200">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 py-1 mb-2">{label}</div>
                         {React.Children.map(children, child =>
                             React.cloneElement(child, { isDropdownItem: true })
                         )}
@@ -203,11 +203,11 @@ const Sidebar = () => {
     };
 
     return (
-        <div className="min-h-screen flex bg-white dark:bg-gray-900 antialiased relative">
+        <div className="min-h-screen flex bg-white antialiased relative">
             {/* Mobile overlay */}
             {mobileOpen && (
                 <div
-                    className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+                    className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-30 md:hidden"
                     onClick={toggleMobileSidebar}
                     aria-hidden="true"
                 ></div>
@@ -215,28 +215,28 @@ const Sidebar = () => {
 
             {/* Sidebar - Untitled UI Style */}
             <div
-                className={`fixed top-0 left-0 h-screen z-40 flex flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden transition-all duration-200 ease-in-out ${
-                    collapsed ? 'w-16' : 'w-64'
+                className={`fixed top-0 left-0 h-screen z-40 flex flex-col border-r border-gray-200 bg-white shadow-sm overflow-hidden transition-all duration-200 ease-in-out ${
+                    collapsed ? 'w-20' : 'w-72'
                 } ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
             >
                 <div className="flex flex-col h-full">
                     {/* Sidebar Header */}
-                    <div className="flex items-center justify-between h-14 px-4 border-b border-gray-200 dark:border-gray-800">
+                    <div className="flex items-center justify-between h-16 px-5 border-b border-gray-200">
                         {!collapsed ? (
-                            <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-md overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-lg overflow-hidden bg-primary-100 flex items-center justify-center">
                                     <img className="w-5 h-5" src={logo} alt="Question DB" />
                                 </div>
-                                <span className="font-medium text-sm text-gray-900 dark:text-gray-100">Exam System</span>
+                                <span className="font-semibold text-base text-gray-900">Exam System</span>
                             </div>
                         ) : (
-                            <div className="w-8 h-8 mx-auto rounded-md overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                            <div className="w-9 h-9 mx-auto rounded-lg overflow-hidden bg-primary-100 flex items-center justify-center">
                                 <img className="w-5 h-5" src={logo} alt="Question DB" />
                             </div>
                         )}
                         <button
                             onClick={toggleSidebar}
-                            className={`w-8 h-8 rounded-md flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800 ${
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-100 ${
                                 collapsed ? 'hidden' : ''
                             }`}
                             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -253,11 +253,11 @@ const Sidebar = () => {
                         </button>
                     </div>
 
-                    {/* Navigation Items - Notion/Untitled UI Style */}
-                    <div className="flex flex-col py-4 overflow-y-auto">
+                    {/* Navigation Items - Untitled UI Style */}
+                    <div className="flex flex-col py-5 overflow-y-auto">
                         {/* Section: Main */}
-                        <div className="px-3 mb-2">
-                            <h3 className={`text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 ${collapsed ? 'text-center' : ''}`}>
+                        <div className="px-4 mb-4">
+                            <h3 className={`text-xs font-medium text-gray-500 uppercase tracking-wider mb-3 ${collapsed ? 'text-center' : ''}`}>
                                 {!collapsed && 'Main'}
                             </h3>
 
@@ -283,8 +283,8 @@ const Sidebar = () => {
 
                         {/* Section: Content Management - For teachers and admins */}
                         {!isStudent && (
-                            <div className="px-3 mb-2 mt-4">
-                                <h3 className={`text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 ${collapsed ? 'text-center' : ''}`}>
+                            <div className="px-4 mb-4 mt-6">
+                                <h3 className={`text-xs font-medium text-gray-500 uppercase tracking-wider mb-3 ${collapsed ? 'text-center' : ''}`}>
                                     {!collapsed && 'Content'}
                                 </h3>
 
@@ -301,8 +301,8 @@ const Sidebar = () => {
 
                         {/* Section: Administration - Admin Only */}
                         {isAdmin && (
-                            <div className="px-3 mb-2 mt-4">
-                                <h3 className={`text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 ${collapsed ? 'text-center' : ''}`}>
+                            <div className="px-4 mb-4 mt-6">
+                                <h3 className={`text-xs font-medium text-gray-500 uppercase tracking-wider mb-3 ${collapsed ? 'text-center' : ''}`}>
                                     {!collapsed && 'Admin'}
                                 </h3>
 
@@ -316,20 +316,20 @@ const Sidebar = () => {
                         )}
                     </div>
 
-                    {/* Sidebar Footer - Notion/Untitled UI Style */}
-                    <div className="mt-auto border-t border-gray-200 dark:border-gray-800">
+                    {/* Sidebar Footer - Untitled UI Style */}
+                    <div className="mt-auto border-t border-gray-200">
                         {!collapsed ? (
-                            <div className="p-4">
+                            <div className="p-5">
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center text-primary-600 font-medium">
                                             {user.name?.charAt(0) || user.username?.charAt(0) || 'U'}
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                            <span className="text-sm font-medium text-gray-900">
                                                 {user.name || user.username || 'User'}
                                             </span>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                            <span className="text-xs text-gray-500">
                                                 {isAdmin ? 'Administrator' : isStudent ? 'Student' : 'Teacher'}
                                             </span>
                                         </div>
@@ -337,47 +337,47 @@ const Sidebar = () => {
                                     <div className="flex items-center">
                                         <button
                                             onClick={handleLogout}
-                                            className="p-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800"
+                                            className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                                             aria-label="Logout"
                                         >
-                                            <FiLogOut className="h-4 w-4" />
+                                            <FiLogOut className="h-5 w-5" />
                                         </button>
                                     </div>
                                 </div>
-                                <div className="mt-3 flex items-center justify-between">
+                                <div className="mt-4 flex items-center justify-between">
                                     <button
                                         onClick={toggleDarkMode}
-                                        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
+                                        className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
                                     >
-                                        <span className="flex items-center gap-2">
+                                        <span className="flex items-center gap-3">
                                             {isDarkMode ? (
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                                                 </svg>
                                             ) : (
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                                                 </svg>
                                             )}
                                             <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
                                         </span>
-                                        <span className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-gray-500 dark:text-gray-400">
+                                        <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-500">
                                             {isDarkMode ? 'On' : 'Off'}
                                         </span>
                                     </button>
                                 </div>
                             </div>
                         ) : (
-                            <div className="py-4 flex flex-col items-center gap-2">
-                                <div className="w-8 h-8 rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                            <div className="py-5 flex flex-col items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center text-primary-600 font-medium">
                                     {user.name?.charAt(0) || user.username?.charAt(0) || 'U'}
                                 </div>
                                 <button
                                     onClick={handleLogout}
-                                    className="p-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800"
+                                    className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                                     aria-label="Logout"
                                 >
-                                    <FiLogOut className="h-4 w-4" />
+                                    <FiLogOut className="h-5 w-5" />
                                 </button>
                             </div>
                         )}
@@ -388,20 +388,20 @@ const Sidebar = () => {
             {/* Mobile menu button */}
             <button
                 onClick={toggleMobileSidebar}
-                className="fixed top-4 left-4 z-20 md:hidden bg-white dark:bg-gray-800 p-2 rounded-md shadow-md border border-gray-200 dark:border-gray-700"
+                className="fixed top-5 left-5 z-20 md:hidden bg-white p-2.5 rounded-lg shadow-sm border border-gray-200"
                 aria-label="Open menu"
             >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-700 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
             </button>
 
             {/* Main Content - Untitled UI Style */}
             <div
-                className={`flex-1 w-full transition-all duration-200 ease-in-out ${collapsed ? 'md:ml-16' : 'md:ml-64'}`}
+                className={`flex-1 w-full transition-all duration-200 ease-in-out ${collapsed ? 'md:ml-20' : 'md:ml-72'}`}
             >
-                <main className="p-4 sm:p-6 max-w-full bg-white dark:bg-gray-900 min-h-screen overflow-x-hidden">
-                    <div className="md:hidden h-10"></div> {/* Spacer for mobile menu button */}
+                <main className="p-5 sm:p-6 md:p-8 max-w-full bg-white min-h-screen overflow-x-hidden">
+                    <div className="md:hidden h-12"></div> {/* Spacer for mobile menu button */}
                     <Outlet />
                 </main>
             </div>

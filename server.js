@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
+const { getCorsConfig } = require('./cors-config');
 
 // Load environment variables
 dotenv.config();
@@ -10,15 +11,11 @@ dotenv.config();
 // Initialize Express app
 const app = express();
 
-// Parse CORS origins from environment variable
-const corsOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [];
-const corsCredentials = process.env.CORS_CREDENTIALS === 'true';
+// Get CORS configuration from shared module
+const corsConfig = getCorsConfig();
 
 // Middleware
-app.use(cors({
-  origin: corsOrigins,
-  credentials: corsCredentials
-}));
+app.use(cors(corsConfig));
 app.use(express.json());
 app.use(morgan('dev'));
 
@@ -50,4 +47,4 @@ app.get('/api/info', (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-}); 
+});

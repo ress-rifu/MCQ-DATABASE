@@ -423,6 +423,24 @@ router.get('/chapters/:chapterId/topics', async (req, res) => {
             return res.status(404).json({ message: 'Chapter not found' });
         }
 
+        // First check if the topics table exists
+        const tableCheck = await pool.query(
+            `SELECT EXISTS (
+                SELECT FROM information_schema.tables
+                WHERE table_schema = 'public'
+                AND table_name = 'topics'
+            )`
+        );
+
+        const topicsTableExists = tableCheck.rows[0].exists;
+        console.log('Topics table exists:', topicsTableExists);
+
+        if (!topicsTableExists) {
+            // If topics table doesn't exist, return empty array instead of error
+            console.log('Topics table does not exist, returning empty array');
+            return res.json([]);
+        }
+
         const result = await pool.query(
             `SELECT t.*, ch.name as chapter_name, s.name as subject_name, c.name as class_name
              FROM topics t
@@ -436,14 +454,35 @@ router.get('/chapters/:chapterId/topics', async (req, res) => {
 
         res.json(result.rows);
     } catch (err) {
-        console.error('Error fetching topics:', err);
-        res.status(500).json({ message: 'Failed to fetch topics' });
+        console.error('Error fetching topics for chapter:', err);
+        console.error('Error details:', err.stack);
+        // Return empty array instead of error to prevent UI breakage
+        res.json([]);
     }
 });
 
 // Get all topics across all chapters
 router.get('/topics', async (req, res) => {
     try {
+        // First check if the topics table exists
+        const tableCheck = await pool.query(
+            `SELECT EXISTS (
+                SELECT FROM information_schema.tables
+                WHERE table_schema = 'public'
+                AND table_name = 'topics'
+            )`
+        );
+
+        const topicsTableExists = tableCheck.rows[0].exists;
+        console.log('Topics table exists:', topicsTableExists);
+
+        if (!topicsTableExists) {
+            // If topics table doesn't exist, return empty array instead of error
+            console.log('Topics table does not exist, returning empty array');
+            return res.json([]);
+        }
+
+        // If table exists, proceed with query
         const result = await pool.query(
             `SELECT t.*, ch.name as chapter_name, s.name as subject_name, c.name as class_name
              FROM topics t
@@ -456,7 +495,9 @@ router.get('/topics', async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error('Error fetching all topics:', err);
-        res.status(500).json({ message: 'Failed to fetch topics' });
+        console.error('Error details:', err.stack);
+        // Return empty array instead of error to prevent UI breakage
+        res.json([]);
     }
 });
 
