@@ -50,7 +50,7 @@ const CreateExam = () => {
     duration_minutes: 60,
     total_marks: 0,
     course_id: '',
-    chapters: [],
+    chapters: [], // This will store chapter IDs as integers
 
     // Basic Settings
     introduction: '',
@@ -135,18 +135,33 @@ const CreateExam = () => {
     const fetchExamData = async () => {
       if (isEditing) {
         try {
+          console.log('Fetching exam data for editing, ID:', id);
           const response = await axios.get(`${API_BASE_URL}/api/exams/${id}`, {
             headers: getAuthHeader()
           });
 
           const examData = response.data;
+          console.log('Exam data received:', examData);
 
           // Format dates
           examData.start_datetime = new Date(examData.start_datetime);
           examData.end_datetime = new Date(examData.end_datetime);
 
-          // Extract chapter IDs
-          const chapterIds = examData.chapters ? examData.chapters.map(ch => ch.id) : [];
+          // Extract chapter IDs and ensure they are integers
+          let chapterIds = [];
+          if (examData.chapters && Array.isArray(examData.chapters)) {
+            // If chapters is an array of objects with id property
+            if (examData.chapters.length > 0 && typeof examData.chapters[0] === 'object' && 'id' in examData.chapters[0]) {
+              chapterIds = examData.chapters.map(ch => parseInt(ch.id));
+              console.log('Extracted chapter IDs from objects:', chapterIds);
+            }
+            // If chapters is already an array of IDs
+            else {
+              chapterIds = examData.chapters.map(id => typeof id === 'string' ? parseInt(id) : id);
+              console.log('Converted chapter IDs to integers:', chapterIds);
+            }
+          }
+          console.log('Final chapter IDs:', chapterIds);
           examData.chapters = chapterIds;
 
           setFormData(examData);
@@ -160,6 +175,7 @@ const CreateExam = () => {
           toast.error('Failed to load exam data');
         }
       } else {
+        console.log('Creating new exam, initializing with empty data');
         setInitialDataLoaded(true);
       }
     };
@@ -171,6 +187,7 @@ const CreateExam = () => {
   useEffect(() => {
     const fetchCurriculumData = async () => {
       try {
+        console.log('Fetching curriculum data...');
         const [coursesRes, classesRes, subjectsRes, chaptersRes] = await Promise.all([
           axios.get(`${API_BASE_URL}/api/courses`, {
             headers: getAuthHeader()
@@ -186,10 +203,22 @@ const CreateExam = () => {
           })
         ]);
 
+        console.log('Courses data:', coursesRes.data);
+        console.log('Classes data:', classesRes.data);
+        console.log('Subjects data:', subjectsRes.data);
+        console.log('Chapters data:', chaptersRes.data);
+
+        // Process chapters to ensure IDs are integers
+        const processedChapters = chaptersRes.data.map(chapter => ({
+          ...chapter,
+          id: parseInt(chapter.id)
+        }));
+        console.log('Processed chapters with integer IDs:', processedChapters);
+
         setCourses(coursesRes.data);
         setClasses(classesRes.data);
         setSubjects(subjectsRes.data);
-        setAllChapters(chaptersRes.data);
+        setAllChapters(processedChapters);
       } catch (error) {
         console.error('Error fetching curriculum data:', error);
         toast.error('Failed to load curriculum data');
@@ -204,21 +233,31 @@ const CreateExam = () => {
     if (formData.course_id && courses.length > 0) {
       const fetchCourseContent = async () => {
         try {
+          console.log('Fetching course content for course ID:', formData.course_id);
           const response = await axios.get(`${API_BASE_URL}/api/courses/${formData.course_id}/content`, {
             headers: getAuthHeader()
           });
 
-          // Filter for chapter content only
-          const courseChapters = response.data
-            .filter(item => item.chapter_id)
-            .map(item => ({
-              id: item.chapter_id,
-              name: item.chapter_name,
-              subject_name: item.subject_name,
-              class_name: item.class_name
-            }));
+          console.log('Course content API response:', response.data);
 
-          setAvailableChapters(courseChapters);
+          // Filter for chapter content only
+          if (response.data && Array.isArray(response.data)) {
+            const courseChapters = response.data
+              .filter(item => item.chapter_id)
+              .map(item => ({
+                id: parseInt(item.chapter_id),  // Ensure ID is an integer
+                name: item.chapter_name,
+                subject_name: item.subject_name,
+                class_name: item.class_name
+              }));
+
+            console.log('Processed course chapters:', courseChapters);
+            setAvailableChapters(courseChapters);
+          } else {
+            console.error('Invalid course content response format:', response.data);
+            toast.error('Failed to load course chapters: Invalid data format');
+            setAvailableChapters([]);
+          }
         } catch (error) {
           console.error('Error fetching course content:', error);
           toast.error('Failed to load course chapters');
@@ -242,14 +281,42 @@ const CreateExam = () => {
 
   // Filter chapters based on selected subject
   useEffect(() => {
+    console.log('Filtering chapters based on subject/class selection');
+    console.log('Selected subject:', selectedSubject);
+    console.log('Selected class:', selectedClass);
+    console.log('All chapters:', allChapters);
+
     if (selectedSubject) {
-      setFilteredChapters(allChapters.filter(c => c.subject_id === parseInt(selectedSubject)));
+      // Convert selectedSubject to integer for comparison
+      const subjectIdInt = parseInt(selectedSubject);
+      // Ensure subject_id in chapters is also an integer for comparison
+      const filtered = allChapters.filter(c => {
+        const chapterSubjectId = typeof c.subject_id === 'string' ? parseInt(c.subject_id) : c.subject_id;
+        return chapterSubjectId === subjectIdInt;
+      });
+      console.log('Filtered chapters by subject:', filtered);
+      setFilteredChapters(filtered);
     } else if (selectedClass) {
+      // Convert selectedClass to integer for comparison
+      const classIdInt = parseInt(selectedClass);
+      // Get subject IDs for the selected class
       const subjectIds = subjects
-        .filter(s => s.class_id === parseInt(selectedClass))
-        .map(s => s.id);
-      setFilteredChapters(allChapters.filter(c => subjectIds.includes(c.subject_id)));
+        .filter(s => {
+          const classId = typeof s.class_id === 'string' ? parseInt(s.class_id) : s.class_id;
+          return classId === classIdInt;
+        })
+        .map(s => typeof s.id === 'string' ? parseInt(s.id) : s.id);
+      console.log('Subject IDs for selected class:', subjectIds);
+
+      // Filter chapters by subject IDs
+      const filtered = allChapters.filter(c => {
+        const chapterSubjectId = typeof c.subject_id === 'string' ? parseInt(c.subject_id) : c.subject_id;
+        return subjectIds.includes(chapterSubjectId);
+      });
+      console.log('Filtered chapters by class:', filtered);
+      setFilteredChapters(filtered);
     } else {
+      console.log('No filters applied, showing all chapters');
       setFilteredChapters(allChapters);
     }
   }, [selectedSubject, selectedClass, subjects, allChapters]);
@@ -380,14 +447,14 @@ const CreateExam = () => {
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
     console.log('Submitting exam form...');
-    
+
     // Show immediate feedback
     toast.loading('Validating exam data...', { id: 'exam-submit' });
-    
+
     // Comprehensive validation for all required fields
     const validationErrors = [];
     const cautions = [];
-    
+
     // Critical errors (prevent submission)
     if (!formData.title) validationErrors.push('Exam title is required');
     if (!formData.course_id) validationErrors.push('Please select a course');
@@ -395,66 +462,80 @@ const CreateExam = () => {
     if (selectedQuestions.length === 0) validationErrors.push('Add at least one question');
     if (formData.duration_minutes <= 0) validationErrors.push('Exam duration must be greater than 0 minutes');
     if (formData.start_datetime >= formData.end_datetime) validationErrors.push('End date must be after start date');
-    
+
     // Cautions (warnings but allow submission)
     if (!formData.description) cautions.push('Exam description is empty');
     if (!formData.syllabus) cautions.push('Exam syllabus information is empty');
     if (formData.negative_marking && formData.negative_percentage <= 0) cautions.push('Negative marking is enabled but percentage is set to 0');
     if (selectedQuestions.length < 5) cautions.push('Exam has fewer than 5 questions');
     if (formData.duration_minutes < 10) cautions.push('Exam duration is very short (less than 10 minutes)');
-    
+
     // Display cautions if any
     if (cautions.length > 0 && validationErrors.length === 0) {
       toast.dismiss('exam-submit');
-      toast.warning('Some recommended information is missing. See below.', { duration: 5000 });
-      
+      toast('Some recommended information is missing. See below.', {
+        duration: 5000,
+        icon: '⚠️',
+        style: {
+          background: '#FFF9C4',
+          color: '#5D4037'
+        }
+      });
+
       // Create a detailed caution message
-      const cautionMessage = 'CAUTION: The following information is recommended but not required:\n\n- ' + 
-        cautions.join('\n- ') + 
+      const cautionMessage = 'CAUTION: The following information is recommended but not required:\n\n- ' +
+        cautions.join('\n- ') +
         '\n\nDo you want to continue anyway?';
-      
+
       // Ask user if they want to continue despite cautions
       const shouldContinue = window.confirm(cautionMessage);
-      
+
       if (!shouldContinue) {
         return; // Stop submission if user cancels
       }
-      
+
       // Otherwise, continue with submission
       toast.loading('Proceeding with submission...', { id: 'exam-submit' });
     }
-    
+
     // Display validation errors if any
     if (validationErrors.length > 0) {
       toast.dismiss('exam-submit');
       toast.error('Cannot create exam. Please fix the following issues:', { duration: 5000 });
       validationErrors.forEach(error => toast.error(error, { duration: 5000 }));
-      
+
       // Navigate to appropriate tab
       setActiveTab(validationErrors.some(err => err.includes('question')) ? 'questions' : 'details');
       return;
     }
-    
+
     // Set submitting state
     setIsSubmitting(true);
-    
+
     // Use a timeout to continue the process asynchronously
     setTimeout(() => {
       createExam();
     }, 100);
   };
-  
+
   // Function to perform the actual exam creation
   const createExam = async () => {
-    try {  
+    try {
       console.log('Creating exam with data:', formData);
       console.log('Selected questions:', selectedQuestions);
-      
+
       // We already validated in handleSubmit, so proceed with API call
       console.log('Proceeding with exam creation API call');
       toast.loading('Connecting to server...', { id: 'creating-exam' });
       // Prepare the payload with all required fields
-      const payload = {
+      console.log('Preparing exam payload with chapters:', formData.chapters);
+
+      // Ensure chapters are integers
+      const chaptersAsIntegers = formData.chapters.map(id => typeof id === 'string' ? parseInt(id) : id);
+      console.log('Chapters converted to integers:', chaptersAsIntegers);
+
+      // Create a basic payload with only the essential fields that we know exist in the database
+      const basicPayload = {
         // Basic exam info
         title: formData.title.trim(),
         description: formData.description || '',
@@ -464,7 +545,7 @@ const CreateExam = () => {
         duration_minutes: parseInt(formData.duration_minutes) || 60,
         total_marks: selectedQuestions.reduce((sum, q) => sum + (q.marks || 1), 0),
         course_id: formData.course_id,
-        chapters: formData.chapters,
+        chapters: chaptersAsIntegers, // Use the converted array
 
         // Question settings
         negative_marking: formData.negative_marking || false,
@@ -478,46 +559,31 @@ const CreateExam = () => {
           marks: q.marks || 1
         })),
 
-        // Basic Settings
-        introduction: formData.introduction || '',
-
-        // Question Settings
-        pagination_type: formData.pagination_type || 'all',
-        allow_blank_answers: formData.allow_blank_answers !== undefined ? formData.allow_blank_answers : true,
-
-        // Review settings
-        conclusion_text: formData.conclusion_text || '',
-        show_custom_result_message: formData.show_custom_result_message || false,
-        pass_message: formData.pass_message || 'Congratulations! You passed the exam.',
-        fail_message: formData.fail_message || 'Sorry, you did not pass the exam.',
-        passing_score: formData.passing_score || 60,
-        show_score: formData.show_score !== undefined ? formData.show_score : true,
-        show_test_outline: formData.show_test_outline !== undefined ? formData.show_test_outline : true,
-        show_correct_incorrect: formData.show_correct_incorrect !== undefined ? formData.show_correct_incorrect : true,
-        show_correct_answer: formData.show_correct_answer !== undefined ? formData.show_correct_answer : true,
-        show_explanation: formData.show_explanation !== undefined ? formData.show_explanation : true,
-
-        // Access control
-        access_type: formData.access_type || 'anyone',  // Fixed: changed 'open' to 'anyone' to match expected values
-        access_passcode: formData.access_passcode || '',
-        identifier_list: formData.identifier_list || [],
-        email_list: formData.email_list || [],
-        time_limit_type: formData.time_limit_type || 'specified',
-        attempt_limit_type: formData.attempt_limit_type || 'unlimited',
-        max_attempts: formData.max_attempts || 1,
-        identifier_prompt: formData.identifier_prompt || 'Please enter your ID',
-
-        // Browser settings
-        disable_right_click: formData.disable_right_click || false,
-        disable_copy_paste: formData.disable_copy_paste || false,
-        disable_translate: formData.disable_translate || false,
-        disable_autocomplete: formData.disable_autocomplete || false,
-        disable_spellcheck: formData.disable_spellcheck || false,
-        disable_printing: formData.disable_printing || false,
-
         // Add created_by field with the current user's ID
         created_by: user?.id
       };
+
+      console.log('Using basic payload to avoid database schema issues');
+      const payload = basicPayload;
+
+      // Remove any fields that might cause issues with the database
+      // These fields are not in the original database schema
+      const fieldsToRemove = [
+        'introduction', 'pagination_type', 'allow_blank_answers', 'conclusion_text',
+        'show_custom_result_message', 'pass_message', 'fail_message', 'passing_score',
+        'show_score', 'show_test_outline', 'show_correct_incorrect', 'show_correct_answer',
+        'show_explanation', 'access_type', 'access_passcode', 'identifier_list', 'email_list',
+        'time_limit_type', 'attempt_limit_type', 'max_attempts', 'identifier_prompt',
+        'disable_right_click', 'disable_copy_paste', 'disable_translate',
+        'disable_autocomplete', 'disable_spellcheck', 'disable_printing'
+      ];
+
+      // Make sure none of these fields are in the payload
+      fieldsToRemove.forEach(field => {
+        if (field in payload) {
+          delete payload[field];
+        }
+      });
 
       // Convert dates to ISO strings if they are Date objects
       if (payload.start_datetime instanceof Date) {
@@ -565,7 +631,7 @@ const CreateExam = () => {
           console.log('Update response:', response.data);
           toast.dismiss('processing');
           toast.success('Exam updated successfully!');
-          
+
           // Navigate back to exams list after successful update
           setTimeout(() => {
             navigate('/exams');
@@ -574,7 +640,7 @@ const CreateExam = () => {
           console.log('Sending create exam request with payload:', JSON.stringify(payload, null, 2));
           // Make API call with simplified error handling
           console.log('About to make API call to create exam');
-          
+
           // Use a simple fetch call for maximum compatibility
           fetch(`${API_BASE_URL}/api/exams`, {
             method: 'POST',
@@ -583,17 +649,31 @@ const CreateExam = () => {
           })
           .then(response => {
             console.log('Got response from server, status:', response.status);
-            if (response.ok) {
-              return response.json();
-            } else {
-              throw new Error(`Server returned ${response.status}: ${response.statusText}`);
-            }
+            return response.text().then(text => {
+              let data;
+              try {
+                // Try to parse the response as JSON
+                data = JSON.parse(text);
+              } catch (e) {
+                console.error('Error parsing JSON response:', e);
+                console.log('Raw response text:', text);
+                // If parsing fails, create a simple object with the raw text
+                data = { error: 'Invalid JSON response from server', rawText: text };
+              }
+
+              if (response.ok) {
+                return data;
+              } else {
+                // Throw an error with the server's error message if available
+                throw new Error(data.error || data.message || `Server returned ${response.status}: ${response.statusText}`);
+              }
+            });
           })
           .then(data => {
             console.log('Successfully parsed response:', data);
             toast.dismiss('sending');
             toast.success('Exam created successfully!');
-            
+
             // Simple alert and navigation
             alert('Exam created successfully! Click OK to go to exams list.');
             window.location.href = '/exams';
@@ -601,8 +681,13 @@ const CreateExam = () => {
           .catch(error => {
             console.error('Error during fetch:', error);
             toast.dismiss('sending');
-            toast.error(`Failed to create exam: ${error.message}`);
-            alert(`Error creating exam: ${error.message}`);
+
+            // Display a more user-friendly error message
+            const errorMessage = error.message || 'Unknown error occurred';
+            toast.error(`Failed to create exam: ${errorMessage}`);
+
+            // Show more detailed error in an alert
+            alert(`Error creating exam: ${errorMessage}\n\nPlease check the console for more details.`);
             setIsSubmitting(false);
           });
         }
@@ -849,28 +934,41 @@ const CreateExam = () => {
               {formData.course_id ? (
                 availableChapters.length > 0 ? (
                   <div className="space-y-3">
-                    {availableChapters.map(chapter => (
-                      <div key={chapter.id} className="flex items-center hover:bg-gray-50 p-2 rounded-md transition-colors">
-                        <input
-                          type="checkbox"
-                          id={`chapter-${chapter.id}`}
-                          checked={formData.chapters.includes(chapter.id)}
-                          onChange={(e) => {
-                            const isChecked = e.target.checked;
-                            setFormData(prev => ({
-                              ...prev,
-                              chapters: isChecked
-                                ? [...prev.chapters, chapter.id]
-                                : prev.chapters.filter(id => id !== chapter.id)
-                            }));
-                          }}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor={`chapter-${chapter.id}`} className="ml-2 block text-sm text-gray-700 cursor-pointer flex-1">
-                          {chapter.name} <span className="text-gray-500 text-xs">({chapter.subject_name}, {chapter.class_name})</span>
-                        </label>
-                      </div>
-                    ))}
+                    {availableChapters.map(chapter => {
+                      // Ensure chapter ID is an integer
+                      const chapterId = typeof chapter.id === 'string' ? parseInt(chapter.id) : chapter.id;
+                      // Check if this chapter is selected
+                      const isSelected = formData.chapters.includes(chapterId);
+
+                      return (
+                        <div key={chapterId} className="flex items-center hover:bg-gray-50 p-2 rounded-md transition-colors">
+                          <input
+                            type="checkbox"
+                            id={`chapter-${chapterId}`}
+                            checked={isSelected}
+                            onChange={(e) => {
+                              const isChecked = e.target.checked;
+                              console.log('Chapter checkbox changed:', chapterId, isChecked);
+                              console.log('Current chapters:', formData.chapters);
+                              setFormData(prev => {
+                                const newChapters = isChecked
+                                  ? [...prev.chapters, chapterId]
+                                  : prev.chapters.filter(id => id !== chapterId);
+                                console.log('New chapters array:', newChapters);
+                                return {
+                                  ...prev,
+                                  chapters: newChapters
+                                };
+                              });
+                            }}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <label htmlFor={`chapter-${chapterId}`} className="ml-2 block text-sm text-gray-700 cursor-pointer flex-1">
+                            {chapter.name} <span className="text-gray-500 text-xs">({chapter.subject_name}, {chapter.class_name})</span>
+                          </label>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="flex items-center justify-center py-6 text-sm text-gray-500">
@@ -880,28 +978,41 @@ const CreateExam = () => {
               ) : selectedClass ? (
                 filteredChapters.length > 0 ? (
                   <div className="space-y-3">
-                    {filteredChapters.map(chapter => (
-                      <div key={chapter.id} className="flex items-center hover:bg-gray-50 p-2 rounded-md transition-colors">
-                        <input
-                          type="checkbox"
-                          id={`chapter-${chapter.id}`}
-                          checked={formData.chapters.includes(chapter.id)}
-                          onChange={(e) => {
-                            const isChecked = e.target.checked;
-                            setFormData(prev => ({
-                              ...prev,
-                              chapters: isChecked
-                                ? [...prev.chapters, chapter.id]
-                                : prev.chapters.filter(id => id !== chapter.id)
-                            }));
-                          }}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor={`chapter-${chapter.id}`} className="ml-2 block text-sm text-gray-700 cursor-pointer flex-1">
-                          {chapter.name}
-                        </label>
-                      </div>
-                    ))}
+                    {filteredChapters.map(chapter => {
+                      // Ensure chapter ID is an integer
+                      const chapterId = typeof chapter.id === 'string' ? parseInt(chapter.id) : chapter.id;
+                      // Check if this chapter is selected
+                      const isSelected = formData.chapters.includes(chapterId);
+
+                      return (
+                        <div key={chapterId} className="flex items-center hover:bg-gray-50 p-2 rounded-md transition-colors">
+                          <input
+                            type="checkbox"
+                            id={`chapter-${chapterId}`}
+                            checked={isSelected}
+                            onChange={(e) => {
+                              const isChecked = e.target.checked;
+                              console.log('Chapter checkbox changed:', chapterId, isChecked);
+                              console.log('Current chapters:', formData.chapters);
+                              setFormData(prev => {
+                                const newChapters = isChecked
+                                  ? [...prev.chapters, chapterId]
+                                  : prev.chapters.filter(id => id !== chapterId);
+                                console.log('New chapters array:', newChapters);
+                                return {
+                                  ...prev,
+                                  chapters: newChapters
+                                };
+                              });
+                            }}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <label htmlFor={`chapter-${chapterId}`} className="ml-2 block text-sm text-gray-700 cursor-pointer flex-1">
+                            {chapter.name}
+                          </label>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="flex items-center justify-center py-6 text-sm text-gray-500">

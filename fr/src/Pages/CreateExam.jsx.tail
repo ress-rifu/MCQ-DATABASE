@@ -1,0 +1,10 @@
+              {activeTab === 'questions' && renderQuestionsTab()}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CreateExam;

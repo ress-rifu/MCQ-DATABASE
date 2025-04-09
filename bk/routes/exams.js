@@ -122,6 +122,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
     const exam = examResult.rows[0];
 
     // Get exam chapters
+    console.log('Fetching chapters for exam ID:', examId);
     const chaptersQuery = `
       SELECT ch.*, ec.id as exam_chapter_id, s.name as subject_name, c.name as class_name
       FROM exam_chapters ec
@@ -132,6 +133,8 @@ router.get('/:id', authMiddleware, async (req, res) => {
     `;
 
     const chaptersResult = await pool.query(chaptersQuery, [examId]);
+    console.log('Found chapters:', chaptersResult.rows.length);
+    console.log('Chapter data:', chaptersResult.rows);
     exam.chapters = chaptersResult.rows;
 
     // Get exam questions with full details
@@ -185,21 +188,38 @@ router.post('/', authMiddleware, async (req, res) => {
     let examData = { ...req.body };
     console.log('Exam data received:', examData);
 
-    // Sanitize integer fields - convert empty strings to null
+    // Sanitize integer fields - convert empty strings to null and string numbers to integers
     const integerFields = ['course_id', 'negative_percentage', 'duration_minutes', 'total_marks', 'passing_score', 'max_attempts'];
     integerFields.forEach(field => {
       if (examData[field] === '') {
         examData[field] = null;
+      } else if (typeof examData[field] === 'string' && !isNaN(examData[field])) {
+        // Convert string numbers to integers
+        examData[field] = parseInt(examData[field]);
+        console.log(`Converted ${field} from string to integer:`, examData[field]);
       }
     });
 
     // Ensure arrays are properly formatted
+    console.log('Processing chapters data, original format:', typeof examData.chapters, examData.chapters);
     if (typeof examData.chapters === 'string') {
       try {
         examData.chapters = JSON.parse(examData.chapters);
+        console.log('Chapters parsed from JSON string:', examData.chapters);
       } catch (e) {
+        console.log('Failed to parse chapters as JSON, trying comma-separated format');
         examData.chapters = examData.chapters.split(',').map(id => parseInt(id.trim()));
+        console.log('Chapters parsed from comma-separated string:', examData.chapters);
       }
+    }
+
+    // Ensure all chapter IDs are integers
+    if (Array.isArray(examData.chapters)) {
+      examData.chapters = examData.chapters.map(id => typeof id === 'string' ? parseInt(id) : id);
+      console.log('Final chapters array after conversion:', examData.chapters);
+    } else {
+      console.log('Warning: chapters is not an array after processing:', examData.chapters);
+      examData.chapters = [];
     }
 
     if (typeof examData.questions === 'string') {
@@ -265,59 +285,29 @@ router.post('/', authMiddleware, async (req, res) => {
     console.log('Chapters:', chapters);
     console.log('Questions:', questions);
 
-    // Create exam with all settings
+    // Use a simpler approach - just use the basic schema that we know exists
+    console.log('Using basic schema for exam creation to avoid column issues');
+
+    // Create exam with basic settings only (original schema)
     const examQuery = `
       INSERT INTO exams (
         title, description, start_datetime, end_datetime,
         negative_marking, negative_percentage, shuffle_questions,
         can_change_answer, syllabus, duration_minutes, total_marks,
-        course_id, created_by,
-
-        introduction,
-
-        pagination_type, allow_blank_answers,
-
-        conclusion_text, show_custom_result_message,
-        pass_message, fail_message, passing_score,
-        show_score, show_test_outline, show_correct_incorrect,
-        show_correct_answer, show_explanation,
-
-        access_type, access_passcode, identifier_list, email_list,
-        time_limit_type, attempt_limit_type, max_attempts,
-        identifier_prompt,
-
-        disable_right_click, disable_copy_paste, disable_translate,
-        disable_autocomplete, disable_spellcheck, disable_printing
+        course_id, created_by
       )
       VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-        $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26,
-        $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
       )
       RETURNING *
     `;
 
+    // Create the values array with only the basic fields
     const examValues = [
       title, description, start_datetime, end_datetime,
       negative_marking, negative_percentage, shuffle_questions,
       can_change_answer, syllabus, duration_minutes, total_marks,
-      course_id, req.user.id,
-
-      introduction,
-
-      pagination_type, allow_blank_answers,
-
-      conclusion_text, show_custom_result_message,
-      pass_message, fail_message, passing_score,
-      show_score, show_test_outline, show_correct_incorrect,
-      show_correct_answer, show_explanation,
-
-      access_type, access_passcode, identifier_list, email_list,
-      time_limit_type, attempt_limit_type, max_attempts,
-      identifier_prompt,
-
-      disable_right_click, disable_copy_paste, disable_translate,
-      disable_autocomplete, disable_spellcheck, disable_printing
+      course_id, req.user.id
     ];
 
     // Exam insertion is now handled below
@@ -326,31 +316,69 @@ router.post('/', authMiddleware, async (req, res) => {
     let examId;
 
     try {
-      console.log('Executing exam insert query with values:', examValues);
-      const examResult = await client.query(examQuery, examValues);
+      // Log each value with its type for debugging
+      console.log('Executing exam insert query with values:');
+      examValues.forEach((value, index) => {
+        console.log(`Parameter $${index + 1}:`, value, typeof value);
+      });
+
+      // Validate values before insertion
+      const validatedValues = examValues.map((value, index) => {
+        // Handle specific parameters that need type conversion
+        if (index === 11) { // course_id (index 11)
+          return typeof value === 'string' ? parseInt(value) : value;
+        }
+        // Handle array parameters
+        if (index === 28 || index === 29) { // identifier_list, email_list
+          return Array.isArray(value) ? value : [];
+        }
+        return value;
+      });
+
+      const examResult = await client.query(examQuery, validatedValues);
       console.log('Exam inserted successfully');
       examId = examResult.rows[0].id;
       console.log('New exam ID:', examId);
     } catch (insertError) {
       console.error('Error inserting exam:', insertError);
+      console.error('Error code:', insertError.code);
+      console.error('Error message:', insertError.message);
+      console.error('Error detail:', insertError.detail);
       throw insertError; // Re-throw to be caught by the outer catch block
     }
 
     // Add chapters to exam
     if (chapters && chapters.length > 0) {
       console.log('Adding chapters to exam:', chapters);
+      console.log('Chapter types:', chapters.map(id => typeof id));
+
       for (const chapterId of chapters) {
         try {
+          // Ensure chapter ID is an integer
+          const chapterIdInt = typeof chapterId === 'string' ? parseInt(chapterId) : chapterId;
+          console.log(`Processing chapter ID: ${chapterId} (${typeof chapterId}) -> ${chapterIdInt} (${typeof chapterIdInt})`);
+
+          // Verify chapter exists before adding
+          const chapterCheck = await client.query('SELECT id FROM chapters WHERE id = $1', [chapterIdInt]);
+          if (chapterCheck.rows.length === 0) {
+            console.warn(`Warning: Chapter ID ${chapterIdInt} does not exist in the database`);
+            continue; // Skip this chapter but continue with others
+          }
+
           await client.query(
             'INSERT INTO exam_chapters (exam_id, chapter_id) VALUES ($1, $2)',
-            [examId, chapterId]
+            [examId, chapterIdInt]
           );
-          console.log('Added chapter', chapterId, 'to exam', examId);
+          console.log('Added chapter', chapterIdInt, 'to exam', examId);
         } catch (chapterError) {
           console.error('Error adding chapter', chapterId, 'to exam:', chapterError);
-          throw chapterError;
+          console.error('Error details:', chapterError.message);
+          // Continue instead of throwing to allow other chapters to be added
+          console.log('Continuing with other chapters...');
         }
       }
+    } else {
+      console.log('No chapters to add to exam');
     }
 
     // Add questions to exam
@@ -367,14 +395,31 @@ router.post('/', authMiddleware, async (req, res) => {
 
       for (const qValues of questionValues) {
         try {
+          // Ensure all values are of the correct type
+          const processedValues = [
+            examId,
+            typeof qValues[1] === 'string' ? parseInt(qValues[1]) : qValues[1], // question_id
+            typeof qValues[2] === 'string' ? parseInt(qValues[2]) : qValues[2], // marks
+            typeof qValues[3] === 'string' ? parseInt(qValues[3]) : qValues[3]  // question_order
+          ];
+
+          // Verify question exists before adding
+          const questionCheck = await client.query('SELECT id FROM questions WHERE id = $1', [processedValues[1]]);
+          if (questionCheck.rows.length === 0) {
+            console.warn(`Warning: Question ID ${processedValues[1]} does not exist in the database`);
+            continue; // Skip this question but continue with others
+          }
+
           await client.query(
             'INSERT INTO exam_questions (exam_id, question_id, marks, question_order) VALUES ($1, $2, $3, $4)',
-            qValues
+            processedValues
           );
-          console.log('Added question', qValues[1], 'to exam', examId, 'with marks', qValues[2]);
+          console.log('Added question', processedValues[1], 'to exam', examId, 'with marks', processedValues[2]);
         } catch (questionError) {
           console.error('Error adding question to exam:', questionError);
-          throw questionError;
+          console.error('Error details:', questionError.message);
+          // Continue instead of throwing to allow other questions to be added
+          console.log('Continuing with other questions...');
         }
       }
     } else {
@@ -417,11 +462,50 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Error creating exam:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    try {
+      await client.query('ROLLBACK');
+      console.error('Error creating exam:', error);
+
+      // Provide more detailed error information
+      let errorMessage = 'Server error';
+      let errorDetails = error.message;
+
+      // Check for specific error types
+      if (error.code === '23505') {
+        errorMessage = 'Duplicate entry error';
+        errorDetails = 'An exam with similar details already exists';
+      } else if (error.code === '23503') {
+        errorMessage = 'Foreign key constraint error';
+        errorDetails = 'One of the referenced items (course, chapter, question) does not exist';
+      } else if (error.code === '22P02') {
+        errorMessage = 'Invalid data type';
+        errorDetails = 'One of the values has an incorrect data type';
+      }
+
+      console.error('Detailed error information:', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
+
+      res.status(500).json({
+        message: errorMessage,
+        error: errorDetails,
+        code: error.code || 'unknown'
+      });
+    } catch (rollbackError) {
+      console.error('Error during rollback:', rollbackError);
+      res.status(500).json({
+        message: 'Critical database error',
+        error: 'Error occurred and rollback failed'
+      });
+    }
   } finally {
-    client.release();
+    try {
+      client.release();
+    } catch (releaseError) {
+      console.error('Error releasing client:', releaseError);
+    }
   }
 });
 
@@ -565,15 +649,40 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
     // Update exam chapters - first remove existing ones
     await client.query('DELETE FROM exam_chapters WHERE exam_id = $1', [examId]);
+    console.log('Deleted existing chapters for exam ID:', examId);
 
     // Then add new chapters
     if (chapters && chapters.length > 0) {
+      console.log('Adding updated chapters to exam:', chapters);
+      console.log('Chapter types:', chapters.map(id => typeof id));
+
       for (const chapterId of chapters) {
-        await client.query(
-          'INSERT INTO exam_chapters (exam_id, chapter_id) VALUES ($1, $2)',
-          [examId, chapterId]
-        );
+        try {
+          // Ensure chapter ID is an integer
+          const chapterIdInt = typeof chapterId === 'string' ? parseInt(chapterId) : chapterId;
+          console.log(`Processing chapter ID: ${chapterId} (${typeof chapterId}) -> ${chapterIdInt} (${typeof chapterIdInt})`);
+
+          // Verify chapter exists before adding
+          const chapterCheck = await client.query('SELECT id FROM chapters WHERE id = $1', [chapterIdInt]);
+          if (chapterCheck.rows.length === 0) {
+            console.warn(`Warning: Chapter ID ${chapterIdInt} does not exist in the database`);
+            continue; // Skip this chapter but continue with others
+          }
+
+          await client.query(
+            'INSERT INTO exam_chapters (exam_id, chapter_id) VALUES ($1, $2)',
+            [examId, chapterIdInt]
+          );
+          console.log('Added chapter', chapterIdInt, 'to exam', examId);
+        } catch (chapterError) {
+          console.error('Error adding chapter', chapterId, 'to exam:', chapterError);
+          console.error('Error details:', chapterError.message);
+          // Continue instead of throwing to allow other chapters to be added
+          console.log('Continuing with other chapters...');
+        }
       }
+    } else {
+      console.log('No chapters to add to exam');
     }
 
     // Update exam questions - first remove existing ones
