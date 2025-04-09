@@ -528,16 +528,8 @@ const Overview = () => {
       console.log('Making API calls with headers:', getAuthHeader());
 
       // Direct API calls for debugging
-      const questionsStatsResponse = await axios.get(`${API_BASE_URL}/api/questions/stats`, {
-        headers: getAuthHeader()
-      }).catch(err => {
+      const questionsStatsResponse = await axios.get(`${API_BASE_URL}/api/questions/stats`).catch(err => {
         console.error('Error fetching questions stats:', err);
-        console.error('Error response:', err.response?.data);
-
-        // Show a toast notification for the error
-        toast.error('Could not load questions statistics');
-
-        // Return default values to prevent UI breakage
         return { data: {
           totalQuestions: 0,
           totalSubjects: 0,
@@ -548,65 +540,32 @@ const Overview = () => {
         }};
       });
 
-      // Log the response for debugging
-      console.log('Questions stats response:', questionsStatsResponse.data);
-
-      const curriculumCountResponse = await axios.get(`${API_BASE_URL}/api/curriculum/count`, {
-        headers: getAuthHeader()
-      }).catch(err => {
+      const curriculumCountResponse = await axios.get(`${API_BASE_URL}/api/curriculum/count`).catch(err => {
         console.error('Error fetching curriculum count:', err);
-        console.error('Error response:', err.response?.data);
-        toast.error('Could not load curriculum statistics');
         return { data: { count: 0 } };
       });
 
-      console.log('Curriculum count response:', curriculumCountResponse.data);
-
       const usersCountResponse = user?.role === 'admin' ?
-        await axios.get(`${API_BASE_URL}/api/users/count`, {
-          headers: getAuthHeader()
-        }).catch(err => {
+        await axios.get(`${API_BASE_URL}/api/users/count`).catch(err => {
           console.error('Error fetching users count:', err);
-          console.error('Error response:', err.response?.data);
-          toast.error('Could not load users statistics');
           return { data: { count: 0 } };
         }) :
         { data: { count: '-' } };
 
-      console.log('Users count response:', usersCountResponse.data);
-
-      const activityResponse = await axios.get(`${API_BASE_URL}/api/activity/recent`, {
-        headers: getAuthHeader()
-      }).catch(err => {
+      const activityResponse = await axios.get(`${API_BASE_URL}/api/activity/recent`).catch(err => {
         console.error('Error fetching activity:', err);
-        console.error('Error response:', err.response?.data);
-        toast.error('Could not load recent activity');
         return { data: { activities: [] } };
       });
 
-      console.log('Activity response:', activityResponse.data);
-
-      const examsCountResponse = await axios.get(`${API_BASE_URL}/api/exams/count`, {
-        headers: getAuthHeader()
-      }).catch(err => {
+      const examsCountResponse = await axios.get(`${API_BASE_URL}/api/exams/count`).catch(err => {
         console.error('Error fetching exams count:', err);
-        console.error('Error response:', err.response?.data);
-        toast.error('Could not load exams statistics');
         return { data: { count: 0 } };
       });
 
-      console.log('Exams count response:', examsCountResponse.data);
-
-      const coursesCountResponse = await axios.get(`${API_BASE_URL}/api/courses/count`, {
-        headers: getAuthHeader()
-      }).catch(err => {
+      const coursesCountResponse = await axios.get(`${API_BASE_URL}/api/courses/count`).catch(err => {
         console.error('Error fetching courses count:', err);
-        console.error('Error response:', err.response?.data);
-        toast.error('Could not load courses statistics');
         return { data: { count: 0 } };
       });
-
-      console.log('Courses count response:', coursesCountResponse.data);
 
       // Extract data from responses
       const questionsData = questionsStatsResponse.data;

@@ -5,7 +5,6 @@ import { renderLatex } from '../utils/latexRenderer';
 import 'katex/dist/katex.min.css';
 import EnhancedRichTextEditor from '../components/EnhancedRichTextEditor';
 import Pagination from '../Components/Pagination';
-import ConfirmationModal from '../components/ConfirmationModal';
 
 const MyQuestion = () => {
     const navigate = useNavigate();
@@ -19,11 +18,7 @@ const MyQuestion = () => {
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-
-    // Confirmation modal states
-    const [showClearAllModal, setShowClearAllModal] = useState(false);
-    const [showBatchDeleteModal, setShowBatchDeleteModal] = useState(false);
-
+    
     // User role state
     const [user, setUser] = useState(null);
     const isStudent = user?.role === 'student';
@@ -34,7 +29,7 @@ const MyQuestion = () => {
         if (storedQuestions) {
             setSelectedQuestions(JSON.parse(storedQuestions));
         }
-
+        
         // Get user info from localStorage
         const userInfo = localStorage.getItem('user');
         if (userInfo) {
@@ -65,15 +60,12 @@ const MyQuestion = () => {
         showNotification(`Question removed from ${isStudent ? 'bookmarks' : 'collection'}`);
     };
 
-    const confirmClearAllQuestions = () => {
-        setShowClearAllModal(true);
-    };
-
     const clearAllQuestions = () => {
-        setSelectedQuestions([]);
-        localStorage.removeItem('selectedQuestions');
-        showNotification(`All questions cleared from ${isStudent ? 'bookmarks' : 'collection'}`);
-        setShowClearAllModal(false);
+        if (window.confirm(`Are you sure you want to clear all ${isStudent ? 'bookmarked' : 'selected'} questions?`)) {
+            setSelectedQuestions([]);
+            localStorage.removeItem('selectedQuestions');
+            showNotification(`All questions cleared from ${isStudent ? 'bookmarks' : 'collection'}`);
+        }
     };
 
     // Batch selection handlers
@@ -104,27 +96,23 @@ const MyQuestion = () => {
         setBatchSelectedIds([]);
     };
 
-    const confirmDeleteBatchQuestions = () => {
+    const deleteBatchQuestions = () => {
         if (batchSelectedIds.length === 0) {
             showNotification('Please select questions first', 'warning');
             return;
         }
 
-        setShowBatchDeleteModal(true);
-    };
-
-    const deleteBatchQuestions = () => {
-        const updatedQuestions = selectedQuestions.filter(q => {
-            const questionId = q._id || q.id;
-            return !batchSelectedIds.includes(questionId);
-        });
-
-        setSelectedQuestions(updatedQuestions);
-        localStorage.setItem('selectedQuestions', JSON.stringify(updatedQuestions));
-        const count = batchSelectedIds.length;
-        setBatchSelectedIds([]);
-        showNotification(`${count} questions removed from ${isStudent ? 'bookmarks' : 'collection'}`);
-        setShowBatchDeleteModal(false);
+        if (window.confirm(`Are you sure you want to remove ${batchSelectedIds.length} selected questions?`)) {
+            const updatedQuestions = selectedQuestions.filter(q => {
+                const questionId = q._id || q.id;
+                return !batchSelectedIds.includes(questionId);
+            });
+            
+            setSelectedQuestions(updatedQuestions);
+            localStorage.setItem('selectedQuestions', JSON.stringify(updatedQuestions));
+            setBatchSelectedIds([]);
+            showNotification(`${batchSelectedIds.length} questions removed from ${isStudent ? 'bookmarks' : 'collection'}`);
+        }
     };
 
     const exportToExcel = () => {
@@ -144,7 +132,7 @@ const MyQuestion = () => {
                 'Option B Image': q.option_b_img || '',
                 'Option C': q.option_c,
                 'Option C Image': q.option_c_img || '',
-                'Option D': q.option_d,
+                'Option D': q.option_d, 
                 'Option D Image': q.option_d_img || '',
                 'Answer': q.correct_answer || q.answer,
                 'Explanation': q.explanation,
@@ -158,11 +146,11 @@ const MyQuestion = () => {
 
         // Create a worksheet from the data
         const worksheet = XLSX.utils.json_to_sheet(exportData);
-
+        
         // Create a workbook and add the worksheet
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Selected Questions');
-
+        
         // Generate the Excel file and trigger download
         XLSX.writeFile(workbook, 'selected_questions.xlsx');
         showNotification('Questions exported to Excel');
@@ -171,33 +159,33 @@ const MyQuestion = () => {
     // Function to render Base64 image
     const renderBase64Image = (base64String) => {
         if (!base64String) return null;
-
+        
         try {
             // Check if it's a Base64 string (simple validation)
             if (base64String.startsWith('data:image')) {
                 return (
-                    <img
-                        src={base64String}
-                        alt="Base64 encoded image"
+                    <img 
+                        src={base64String} 
+                        alt="Base64 encoded image" 
                         className="mt-2 max-w-full h-auto rounded-md"
                     />
                 );
             } else if (base64String.match(/^[A-Za-z0-9+/=]+$/)) {
                 // If it's a raw Base64 string without data URI
                 return (
-                    <img
-                        src={`data:image/png;base64,${base64String}`}
-                        alt="Base64 encoded image"
+                    <img 
+                        src={`data:image/png;base64,${base64String}`} 
+                        alt="Base64 encoded image" 
                         className="mt-2 max-w-full h-auto rounded-md"
                     />
                 );
             }
-
+            
             // If it's a URL, return it as is
             return (
-                <img
-                    src={base64String}
-                    alt="Image from URL"
+                <img 
+                    src={base64String} 
+                    alt="Image from URL" 
                     className="mt-2 max-w-full h-auto rounded-md"
                     onError={(e) => {
                         e.target.onerror = null;
@@ -223,11 +211,11 @@ const MyQuestion = () => {
         if (pageSize === 'all') {
             return selectedQuestions;
         }
-
+        
         const startIndex = (currentPage - 1) * pageSize;
         return selectedQuestions.slice(startIndex, startIndex + pageSize);
     };
-
+    
     // Reset pagination when batch selection changes
     useEffect(() => {
         setCurrentPage(1);
@@ -249,9 +237,9 @@ const MyQuestion = () => {
                                         Your {isStudent ? 'bookmarked' : 'collection of selected'} questions
                                     </p>
                                 </div>
-
+                                
                                 <div className="flex items-center gap-3 self-end sm:self-auto">
-                                    <button
+                                    <button 
                                         onClick={handleBackToQuestionBank}
                                         className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-all flex items-center gap-1"
                                     >
@@ -265,7 +253,7 @@ const MyQuestion = () => {
                         </div>
                     </div>
                 </div>
-
+                
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-6">
                     <div className="flex items-center justify-center h-60">
                         <div className="text-center bg-white dark:bg-gray-800 p-8 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md">
@@ -275,7 +263,7 @@ const MyQuestion = () => {
                             <p className="text-gray-600 dark:text-gray-400 mb-5">
                                 No questions in your {isStudent ? 'bookmarks' : 'collection'} yet. Please {isStudent ? 'bookmark' : 'select'} questions from the Question Bank.
                             </p>
-                            <button
+                            <button 
                                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200 shadow-sm"
                                 onClick={handleBackToQuestionBank}
                             >
@@ -308,13 +296,13 @@ const MyQuestion = () => {
                                     )}
                                 </p>
                             </div>
-
+                            
                             <div className="flex items-center gap-3 self-end sm:self-auto">
                                 {!isBatchSelectionMode ? (
                                     <>
                                         {/* Only show selection mode button for non-students */}
                                         {!isStudent && (
-                                            <button
+                                            <button 
                                                 onClick={toggleBatchSelectionMode}
                                                 className="px-3 py-1.5 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-all flex items-center gap-1"
                                             >
@@ -324,9 +312,9 @@ const MyQuestion = () => {
                                                 Select Questions
                                             </button>
                                         )}
-
-                                        <button
-                                            onClick={confirmClearAllQuestions}
+                                        
+                                        <button 
+                                            onClick={clearAllQuestions}
                                             className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-700 transition-all flex items-center gap-1"
                                         >
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -334,10 +322,10 @@ const MyQuestion = () => {
                                             </svg>
                                             Clear All
                                         </button>
-
+                                        
                                         {/* Only show export button for non-students */}
                                         {!isStudent && (
-                                            <button
+                                            <button 
                                                 onClick={exportToExcel}
                                                 className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all flex items-center gap-1"
                                             >
@@ -350,7 +338,7 @@ const MyQuestion = () => {
                                     </>
                                 ) : (
                                     <>
-                                        <button
+                                        <button 
                                             onClick={selectAllQuestions}
                                             className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-all flex items-center gap-1"
                                         >
@@ -360,8 +348,8 @@ const MyQuestion = () => {
                                             Select All
                                         </button>
                                         {batchSelectedIds.length > 0 && (
-                                            <button
-                                                onClick={confirmDeleteBatchQuestions}
+                                            <button 
+                                                onClick={deleteBatchQuestions}
                                                 className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-all flex items-center gap-1"
                                             >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -370,7 +358,7 @@ const MyQuestion = () => {
                                                 Delete Selected
                                             </button>
                                         )}
-                                        <button
+                                        <button 
                                             onClick={toggleBatchSelectionMode}
                                             className="px-3 py-1.5 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-all flex items-center gap-1"
                                         >
@@ -381,7 +369,7 @@ const MyQuestion = () => {
                                         </button>
                                     </>
                                 )}
-                                <button
+                                <button 
                                     onClick={handleBackToQuestionBank}
                                     className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-all flex items-center gap-1"
                                 >
@@ -401,8 +389,8 @@ const MyQuestion = () => {
                     {getPaginatedQuestions().map((question) => {
                         const questionId = question._id || question.id;
                         return (
-                            <div
-                                key={questionId}
+                            <div 
+                                key={questionId} 
                                 className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col h-full"
                             >
                                 {/* Header */}
@@ -417,8 +405,8 @@ const MyQuestion = () => {
                                                     onChange={() => handleBatchSelect(questionId)}
                                                 />
                                                 <div className={`w-5 h-5 rounded border-2 transition-colors duration-200 flex items-center justify-center ${
-                                                    batchSelectedIds.includes(questionId)
-                                                        ? 'bg-indigo-500 border-indigo-500'
+                                                    batchSelectedIds.includes(questionId) 
+                                                        ? 'bg-indigo-500 border-indigo-500' 
                                                         : 'border-gray-300 dark:border-gray-600'
                                                 }`}>
                                                     {batchSelectedIds.includes(questionId) && (
@@ -431,7 +419,7 @@ const MyQuestion = () => {
                                         )}
                                         <div className="flex items-center gap-2">
                                             <h3 className="text-base font-medium text-gray-900 dark:text-gray-100">
-                                                {question.subject || 'No Subject'}
+                                                {question.subject || 'No Subject'} 
                                             </h3>
                                             <span className="text-sm text-gray-500 dark:text-gray-400">· Class {question.classname?.replace(/^Class\s+/i, '') || 'N/A'}</span>
                                             {question.qserial && (
@@ -450,10 +438,10 @@ const MyQuestion = () => {
                                                 </span>
                                             )}
                                             {question.difficulty_level && (
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                                    ${question.difficulty_level.toLowerCase() === 'easy'
-                                                        ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
-                                                        : question.difficulty_level.toLowerCase() === 'medium'
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                    ${question.difficulty_level.toLowerCase() === 'easy' 
+                                                        ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' 
+                                                        : question.difficulty_level.toLowerCase() === 'medium' 
                                                             ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400'
                                                             : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
                                                     }`}>
@@ -483,11 +471,11 @@ const MyQuestion = () => {
                                             </div>
                                         )}
                                     </div>
-
+                                    
                                     {/* Options */}
                                     <div className="grid grid-cols-1 gap-2 mb-4">
                                         {['A', 'B', 'C', 'D'].map(option => (
-                                            <div
+                                            <div 
                                                 key={`option-${option}`}
                                                 className={`p-3 rounded border text-sm ${
                                                     (question.correct_answer === option || question.answer === option)
@@ -515,7 +503,7 @@ const MyQuestion = () => {
                                             </div>
                                         ))}
                                     </div>
-
+                                    
                                     {/* Answer and Explanation */}
                                     <div className="space-y-3">
                                         <div className="p-3 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
@@ -595,10 +583,10 @@ const MyQuestion = () => {
                         );
                     })}
                 </div>
-
+                
                 {/* Pagination */}
                 {selectedQuestions.length > 0 && (
-                    <Pagination
+                    <Pagination 
                         totalItems={selectedQuestions.length}
                         currentPage={currentPage}
                         pageSize={pageSize}
@@ -613,8 +601,8 @@ const MyQuestion = () => {
             {notification.show && (
                 <div className="fixed bottom-4 right-4 z-[9999] animate-fade-in-up">
                     <div className={`px-6 py-3 rounded-md shadow-xl flex items-center ${
-                        notification.type === 'error'
-                            ? 'bg-red-600 text-white'
+                        notification.type === 'error' 
+                            ? 'bg-red-600 text-white' 
                             : notification.type === 'warning'
                                 ? 'bg-amber-500 text-white'
                                 : 'bg-green-600 text-white'
@@ -638,32 +626,6 @@ const MyQuestion = () => {
                     </div>
                 </div>
             )}
-
-            {/* Clear All Confirmation Modal */}
-            <ConfirmationModal
-                isOpen={showClearAllModal}
-                onClose={() => setShowClearAllModal(false)}
-                onConfirm={clearAllQuestions}
-                title="Clear All Questions"
-                message={`Are you sure you want to clear all ${isStudent ? 'bookmarked' : 'selected'} questions? This action cannot be undone.`}
-                confirmText="Clear All"
-                cancelText="Cancel"
-                type="warning"
-                confirmButtonClass="bg-red-600 hover:bg-red-700"
-            />
-
-            {/* Batch Delete Confirmation Modal */}
-            <ConfirmationModal
-                isOpen={showBatchDeleteModal}
-                onClose={() => setShowBatchDeleteModal(false)}
-                onConfirm={deleteBatchQuestions}
-                title="Remove Selected Questions"
-                message={`Are you sure you want to remove ${batchSelectedIds.length} selected questions? This action cannot be undone.`}
-                confirmText="Remove"
-                cancelText="Cancel"
-                type="warning"
-                confirmButtonClass="bg-red-600 hover:bg-red-700"
-            />
         </div>
     );
 };

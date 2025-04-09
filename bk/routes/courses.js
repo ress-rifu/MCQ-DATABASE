@@ -3,21 +3,15 @@ const express = require('express');
 const pool = require('../db');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/authenticate');
-const authMiddleware = require('../middleware/authMiddleware');
 
-// Get total courses count for dashboard - Available to all authenticated users
+// Get total courses count for dashboard
 router.get('/count', async (req, res) => {
     try {
-        console.log('Fetching courses count for user:', req.user ? `ID: ${req.user.id}, Role: ${req.user.role}` : 'Not authenticated');
-
         const result = await pool.query('SELECT COUNT(*) FROM courses');
-        const count = parseInt(result.rows[0].count);
-
-        console.log('Successfully returned courses count:', count);
-        res.json({ count });
+        res.json({ count: parseInt(result.rows[0].count) });
     } catch (err) {
         console.error('Error counting courses:', err);
-        res.status(500).json({ message: 'Failed to count courses', error: err.message });
+        res.status(500).json({ message: 'Failed to count courses' });
     }
 });
 
@@ -330,16 +324,12 @@ router.delete('/:id/content/:contentId', authenticateToken, async (req, res) => 
 router.get('/:id/content', async (req, res) => {
     try {
         const { id } = req.params;
-        console.log('Fetching content for course ID:', id);
 
         // Verify the course exists
         const courseCheck = await pool.query('SELECT id FROM courses WHERE id = $1', [id]);
         if (courseCheck.rows.length === 0) {
-            console.log('Course not found with ID:', id);
             return res.status(404).json({ message: 'Course not found' });
         }
-
-        console.log('Course found, fetching content...');
 
         // Get all content with names
         const result = await pool.query(
@@ -354,8 +344,6 @@ router.get('/:id/content', async (req, res) => {
              WHERE cc.course_id = $1`,
             [id]
         );
-
-        console.log(`Found ${result.rows.length} content items for course ID ${id}`);
 
         res.json(result.rows);
     } catch (err) {

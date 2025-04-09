@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 
@@ -7,43 +8,30 @@ export default defineConfig({
   plugins: [
     react({
       fastRefresh: true,
-      babel: {
-        plugins: [
-          '@babel/plugin-transform-react-jsx'
-        ]
-      }
-    })
+    }),
+    tailwindcss()
   ],
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
+      'react': resolve(__dirname, './node_modules/react'),
+      'react-dom': resolve(__dirname, './node_modules/react-dom'),
     }
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'xlsx', 'axios'],
-    esbuildOptions: {
-      target: 'es2020'
-    }
+    include: ['react', 'react-dom'],
+    force: true
   },
   build: {
-    target: 'es2020',
-    cssTarget: 'chrome80',
-    minify: 'terser',
-    outDir: 'dist',
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          ui: ['react-icons', 'react-datepicker', 'katex'],
-        }
-      }
+    commonjsOptions: {
+      transformMixedEsModules: true,
     }
   },
   server: {
-    hmr: true,
-    port: 3000,
-    strictPort: false,
-    open: true,
+    hmr: { overlay: true },
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
     host: true
   }
 })

@@ -6,7 +6,6 @@ import * as XLSX from 'xlsx';
 import LaTeXRenderer from '../components/LaTeXRenderer';
 import { FiUpload, FiDownload, FiFileText, FiSearch, FiCheck, FiInfo, FiX } from 'react-icons/fi';
 import DocxUpload from '../components/DocxUpload';
-import Notification from '../components/Notification';
 
 const Upload = () => {
   const [file, setFile] = useState(null);
@@ -16,7 +15,7 @@ const Upload = () => {
   const [importInProgress, setImportInProgress] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
   const [activeTab, setActiveTab] = useState('excel'); // 'excel' or 'docx'
-
+  
   // Add state for curriculum selection
   const [classes, setClasses] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -34,7 +33,7 @@ const Upload = () => {
   useEffect(() => {
     fetchCurriculumData();
   }, []);
-
+  
   // Add useEffect to filter subjects when class changes
   useEffect(() => {
     if (selectedClass) {
@@ -48,7 +47,7 @@ const Upload = () => {
       setFilteredSubjects([]);
     }
   }, [selectedClass, subjects]);
-
+  
   // Add useEffect to filter chapters when subject changes
   useEffect(() => {
     if (selectedSubject) {
@@ -73,7 +72,7 @@ const Upload = () => {
       .animate-fadeIn {
         animation: fadeIn 0.3s ease-out forwards;
       }
-
+      
       @keyframes fade-in-up {
         from { opacity: 0; transform: translateY(1rem); }
         to { opacity: 1; transform: translateY(0); }
@@ -92,13 +91,6 @@ const Upload = () => {
     };
   }, []); // Empty dependency array means this effect runs once on mount
 
-  const showNotification = (message, type = 'success') => {
-    setNotification({ show: true, message, type });
-    setTimeout(() => {
-      setNotification({ show: false, message: '', type: '' });
-    }, 3000);
-  };
-
   // Add function to fetch curriculum data
   const fetchCurriculumData = async () => {
     try {
@@ -107,13 +99,13 @@ const Upload = () => {
         showNotification('You need to be logged in to fetch curriculum data', 'error');
         return;
       }
-
+      
       const [classesRes, subjectsRes, chaptersRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/api/curriculum/classes`, { headers: getAuthHeader() }),
         axios.get(`${API_BASE_URL}/api/curriculum/subjects`, { headers: getAuthHeader() }),
         axios.get(`${API_BASE_URL}/api/curriculum/chapters`, { headers: getAuthHeader() })
       ]);
-
+      
       setClasses(classesRes.data || []);
       setSubjects(subjectsRes.data || []);
       setChapters(chaptersRes.data || []);
@@ -122,7 +114,7 @@ const Upload = () => {
       showNotification("Failed to load curriculum data. Please refresh the page.", "error");
     }
   };
-
+  
   const handleFileChange = (e) => {
     if (e.target.files[0]) {
       setFile(e.target.files[0]);
@@ -131,13 +123,20 @@ const Upload = () => {
     }
   };
 
+  const showNotification = (message, type = 'success') => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => {
+      setNotification({ show: false, message: '', type: '' });
+    }, 3000);
+  };
+
   const downloadTemplate = () => {
     const headers = [
       'QuestionID', 'Serial', 'Class', 'Subject', 'Chapter', 'Topic', 'Question', 'Ques_img',
       'OptionA', 'OptionA_IMG', 'OptionB', 'OptionB_IMG', 'OptionC', 'OptionC_IMG', 'OptionD', 'OptionD_IMG',
       'Answer', 'Explaination', 'Explaination_IMG', 'Hint', 'Hint_img', 'Difficulty_level', 'Reference_Board/Institute', 'Reference'
     ];
-
+    
     const sampleRow = {
       'QuestionID': 'MATH001',
       'Serial': '1',
@@ -164,7 +163,7 @@ const Upload = () => {
       'Reference_Board/Institute': 'CBSE',
       'Reference': 'Textbook page 45'
     };
-
+    
     const sampleRow2 = {
       'QuestionID': 'BIO001',
       'Serial': '2',
@@ -191,14 +190,41 @@ const Upload = () => {
       'Reference_Board/Institute': 'NCERT',
       'Reference': 'Chapter 3, Page 28'
     };
-
-    const ws = XLSX.utils.json_to_sheet([sampleRow, sampleRow2], { header: headers });
-
+    
+    const sampleRow3 = {
+      'QuestionID': 'MATH002',
+      'Serial': '3',
+      'Class': 'Class 11',
+      'Subject': 'Mathematics',
+      'Chapter': 'Relations',
+      'Topic': 'Tables and Functions',
+      'Question': 'For the following table, identify the pattern and find the missing value when x = 1:\n\\begin{longtable}[]{@{} >{\centering\\arraybackslash}p{(\\linewidth - 6\\tabcolsep) * \\real{0.2498}} >{\centering\\arraybackslash}p{(\\linewidth - 6\\tabcolsep) * \\real{0.2501}} >{\centering\\arraybackslash}p{(\\linewidth - 6\\tabcolsep) * \\real{0.2501}} >{\centering\\arraybackslash}p{(\\linewidth - 6\\tabcolsep) * \\real{0.2501}}@{}} \\toprule\\noalign{} \\begin{minipage}[b]{\\linewidth}\\centering x \\end{minipage} & \\begin{minipage}[b]{\\linewidth}\\centering 0 \\end{minipage} & \\begin{minipage}[b]{\\linewidth}\\centering \\[-1\\] \\end{minipage} & \\begin{minipage}[b]{\\linewidth}\\centering \\[2\\] \\end{minipage} \\\\ \\midrule\\noalign{} \\endhead \\bottomrule\\noalign{} \\endlastfoot y & $-1$ & $-3$ & $3$ \\end{longtable}',
+      'Ques_img': '',
+      'OptionA': 'y = -2',
+      'OptionA_IMG': '',
+      'OptionB': 'y = 0',
+      'OptionB_IMG': '',
+      'OptionC': 'y = 1',
+      'OptionC_IMG': '',
+      'OptionD': 'y = 2',
+      'OptionD_IMG': '',
+      'Answer': 'C',
+      'Explaination': 'The pattern can be represented as y = x²-1. When we substitute the values: \nFor x = 0: y = 0²-1 = -1\nFor x = -1: y = (-1)²-1 = 1-1 = 0\nFor x = 2: y = 2²-1 = 4-1 = 3\nSo for x = 1: y = 1²-1 = 1-1 = 0',
+      'Explaination_IMG': '',
+      'Hint': 'Look for a quadratic pattern',
+      'Hint_img': '',
+      'Difficulty_level': 'hard',
+      'Reference_Board/Institute': 'CBSE',
+      'Reference': 'Functions chapter'
+    };
+    
+    const ws = XLSX.utils.json_to_sheet([sampleRow, sampleRow2, sampleRow3], { header: headers });
+    
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Questions');
-
+    
     XLSX.writeFile(wb, 'question_template.xlsx');
-
+    
     showNotification('Template downloaded successfully');
   };
 
@@ -224,28 +250,28 @@ const Upload = () => {
         // Process the first sheet by default
         const firstSheetName = sheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-
+        
         // Convert worksheet to JSON with header row
         const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
+        
         // Check if there's enough data
         if (json.length < 2) {
           throw new Error('Not enough data in the sheet. Need at least headers and one data row.');
         }
-
+        
         // Extract headers from first row
         const headers = json[0].map(header => header.toString().trim());
-
+        
         // Check for required headers
         const requiredHeaders = ['Question', 'OptionA', 'OptionB', 'OptionC', 'OptionD', 'Answer'];
-        const missingHeaders = requiredHeaders.filter(header =>
+        const missingHeaders = requiredHeaders.filter(header => 
           !headers.some(h => h.toLowerCase() === header.toLowerCase())
         );
-
+        
         if (missingHeaders.length > 0) {
           throw new Error(`Missing required headers: ${missingHeaders.join(', ')}. Please make sure your file has all required columns.`);
         }
-
+        
         // Extract preview data (up to 5 rows)
         const previewRows = json.slice(1, 6).map(row => {
           const rowData = {};
@@ -254,7 +280,7 @@ const Upload = () => {
           });
           return rowData;
         });
-
+        
         // Create normalized data structure
         const normalizedData = {
           sheets: sheetNames,
@@ -262,7 +288,7 @@ const Upload = () => {
           preview: previewRows,
           totalRows: json.length - 1 // Exclude header row
         };
-
+        
         setSelectedSheet(firstSheetName);
         setSheetData(normalizedData);
         setCurrentStep(2); // Move to review data step
@@ -274,12 +300,12 @@ const Upload = () => {
         setAnalyzing(false);
       }
     };
-
+    
     reader.onerror = () => {
       setAnalyzing(false);
       showNotification('Error reading the file', 'error');
     };
-
+    
     reader.readAsArrayBuffer(file);
   };
 
@@ -296,7 +322,7 @@ const Upload = () => {
       showNotification('Please select a file and sheet first', 'warning');
       return;
     }
-
+    
     if (!useExcelMetadata && (!selectedClass || !selectedSubject || !selectedChapter)) {
       showNotification('Please select class, subject, and chapter or use data from Excel file', 'warning');
       return;
@@ -306,36 +332,36 @@ const Upload = () => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('sheetName', selectedSheet);
-
+    
     // Only append curriculum IDs if we're overriding Excel metadata
     if (!useExcelMetadata) {
       formData.append('classId', selectedClass);
       formData.append('subjectId', selectedSubject);
       formData.append('chapterId', selectedChapter);
-
+      
       // Add class, subject, and chapter names
       const selectedClassObj = classes.find(c => String(c.id) === String(selectedClass));
       const selectedSubjectObj = subjects.find(s => String(s.id) === String(selectedSubject));
       const selectedChapterObj = chapters.find(c => String(c.id) === String(selectedChapter));
-
+      
       formData.append('className', selectedClassObj ? selectedClassObj.name : '');
       formData.append('subjectName', selectedSubjectObj ? selectedSubjectObj.name : '');
       formData.append('chapterName', selectedChapterObj ? selectedChapterObj.name : '');
     }
-
+    
     // Flag to override data in Excel with UI selections
     formData.append('overrideMetadata', useExcelMetadata ? 'false' : 'true');
 
     try {
       const token = localStorage.getItem('token');
       console.log('Token available:', !!token);
-
+      
       if (!token) {
         showNotification('You need to be logged in to import questions', 'error');
         setImportInProgress(false);
         return;
       }
-
+      
       console.log('Starting import request with metadata settings:', {
         useExcelMetadata: useExcelMetadata,
         overrideMetadata: !useExcelMetadata,
@@ -343,7 +369,7 @@ const Upload = () => {
         subject: !useExcelMetadata ? selectedSubject : 'Using Excel data',
         chapter: !useExcelMetadata ? selectedChapter : 'Using Excel data'
       });
-
+      
       const response = await fetch(`${API_URL}/api/csv/import-excel`, {
         method: 'POST',
         body: formData,
@@ -351,12 +377,12 @@ const Upload = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-
+      
       console.log('Import response status:', response.status);
-
+      
       const responseText = await response.text();
       console.log('Raw response:', responseText);
-
+      
       let data;
       try {
         data = JSON.parse(responseText);
@@ -364,15 +390,15 @@ const Upload = () => {
         console.error('Failed to parse response as JSON:', e);
         throw new Error('Invalid response from server');
       }
-
+      
       if (!response.ok) {
         console.error('Import failed with status:', response.status, data);
         throw new Error(data.message || 'Error importing questions');
       }
-
+      
       console.log('Import successful:', data);
       showNotification(`Successfully imported ${data.importedCount} questions`);
-
+      
       // Create activity record for this import
       try {
         const activityPayload = {
@@ -390,27 +416,27 @@ const Upload = () => {
             error_count: data.errorCount || 0
           },
           title: `Imported ${data.importedCount} questions from ${file.name}`,
-          description: useExcelMetadata
+          description: useExcelMetadata 
             ? `Imported questions using metadata from Excel file`
             : `Imported ${data.importedCount} questions for ${selectedClassObj?.name || ''}, ${selectedSubjectObj?.name || ''}, ${selectedChapterObj?.name || ''}`
         };
-
+        
         const activityResponse = await axios.post(
           `${API_BASE_URL}/api/activity`,
           activityPayload,
           { headers: getAuthHeader() }
         );
-
+        
         console.log('Activity recorded:', activityResponse.data);
       } catch (activityError) {
         console.error('Failed to record activity:', activityError);
         // Don't prevent the user from proceeding if activity recording fails
       }
-
+      
       if (data.errorCount > 0) {
         showNotification(`${data.errorCount} rows had errors and were not imported`, 'warning');
       }
-
+      
       // Reset the form after successful import
       setFile(null);
       setSheetData(null);
@@ -430,52 +456,52 @@ const Upload = () => {
   // Function to get difficulty badge based on level
   const getDifficultyBadge = (level) => {
     const normalizedLevel = level?.toString().toLowerCase().trim() || '';
-
+    
     if (['easy', 'e', 'simple', 'beginner'].includes(normalizedLevel)) {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-100 text-success-800">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400">
           Easy
         </span>
       );
     } else if (['hard', 'h', 'difficult', 'challenging', 'advanced'].includes(normalizedLevel)) {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-error-100 text-error-800">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400">
           Hard
         </span>
       );
     } else {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400">
           Medium
         </span>
       );
     }
   };
-
+  
   // Function to format cell content with special handling
   const formatCellContent = (header, content) => {
     if (!content) return '-';
-
+    
     if (header.toLowerCase().includes('difficulty')) {
       return getDifficultyBadge(content);
     }
-
+    
     // Check for LaTeX longtable or other LaTeX content
     if (typeof content === 'string') {
       // Check for LaTeX tables or other LaTeX environments
-      if (content.includes('\\begin{longtable}') ||
+      if (content.includes('\\begin{longtable}') || 
           content.includes('\\begin{tabular}') ||
-          content.includes('\\[') ||
+          content.includes('\\[') || 
           content.includes('$')) {
         return <LaTeXRenderer content={content} className="text-sm" />;
       }
-
+      
       // Truncate long text
       if (content.length > 50) {
         return <span title={content}>{content.substring(0, 50)}...</span>;
       }
     }
-
+    
     return content;
   };
 
@@ -502,267 +528,479 @@ const Upload = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-16">
+    <div className="min-h-screen bg-white dark:bg-gray-900 pb-16">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">Upload</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Upload</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
             Import questions from Excel files or Word documents.
           </p>
         </div>
 
         {/* Tab Selector */}
         <div className="mb-8">
-          <div className="flex space-x-2 border-b border-gray-200">
+          <div className="flex space-x-2 border-b border-gray-200 dark:border-gray-700">
             <button
               className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-all duration-200 ${
-                activeTab === 'excel'
-                ? 'bg-white text-primary-600 border-b-2 border-primary-600 shadow-sm'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                activeTab === 'excel' 
+                ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 shadow-sm' 
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
               onClick={() => handleTabChange('excel')}
             >
-              <div className="flex items-center gap-2">
-                <FiFileText className={activeTab === 'excel' ? 'text-primary-600' : 'text-gray-500'} />
-                Excel Upload
-              </div>
+              Excel Upload
             </button>
             <button
               className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-all duration-200 ${
-                activeTab === 'docx'
-                ? 'bg-white text-primary-600 border-b-2 border-primary-600 shadow-sm'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                activeTab === 'docx' 
+                ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 shadow-sm' 
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
               onClick={() => handleTabChange('docx')}
             >
-              <div className="flex items-center gap-2">
-                <FiFileText className={activeTab === 'docx' ? 'text-primary-600' : 'text-gray-500'} />
-                Word Doc Upload
-              </div>
+              Word Doc Upload
             </button>
           </div>
-          <p className="mt-3 text-sm text-gray-600">
-            Choose the file format you want to upload. Excel files allow for bulk uploads with multiple questions, while Word documents are better for formatted content.
-          </p>
         </div>
 
         {/* Excel Upload Tab */}
         {activeTab === 'excel' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-medium text-gray-900 dark:text-white">Upload Excel File</h2>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Upload an Excel file containing questions in the required format. You can download a template below.
-              </p>
-            </div>
-
-            <div className="p-6">
-              <div className="mb-6">
-                <div
-                  className="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 transition-all duration-200 hover:border-indigo-400 dark:hover:border-indigo-500 bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer group"
-                  onClick={() => document.getElementById('file-upload').click()}
-                >
-                  <input
-                    id="file-upload"
-                    type="file"
-                    accept=".xlsx, .xls"
-                    onChange={handleFileChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  <div className="text-center">
-                    <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-900/20 mb-4 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/30 transition-colors">
-                      <FiUpload className="h-8 w-8 text-indigo-500 dark:text-indigo-400" />
+          <div className="space-y-8">
+            {/* Progress steps indicator */}
+            <div className="mb-8">
+              <div className="relative pt-1 pb-8">
+                {/* Progress bar line */}
+                <div className="absolute top-6 left-5 right-5 h-1 bg-gray-200 dark:bg-gray-700"></div>
+                <div 
+                  className="absolute top-6 left-5 h-1 bg-indigo-600 dark:bg-indigo-500 transition-all duration-300" 
+                  style={{ 
+                    width: currentStep === 1 ? '0%' : currentStep === 2 ? '50%' : '100%' 
+                  }}
+                ></div>
+                
+                {/* Steps */}
+                <div className="flex justify-between px-0 relative z-10">
+                  <div className="flex flex-col items-center">
+                    <div className={`flex items-center justify-center w-12 h-12 rounded-full text-base font-semibold shadow-sm transition-all duration-300 ${
+                      currentStep >= 1 
+                        ? 'bg-indigo-600 text-white' 
+                        : 'bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
+                    }`}>
+                      1
                     </div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {file ? file.name : 'Drag and drop your Excel file here'}
-                    </p>
-                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-500">
-                      {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Supported formats: .xlsx, .xls (Max 10MB)'}
-                    </p>
-                    {!file && (
-                      <button className="mt-4 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
-                        Browse Files
-                      </button>
+                    <span className={`mt-3 text-sm font-medium transition-all duration-300 ${
+                      currentStep >= 1 ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'
+                    }`}>Upload File</span>
+                  </div>
+                  
+                  <div className="flex flex-col items-center">
+                    <div className={`flex items-center justify-center w-12 h-12 rounded-full text-base font-semibold shadow-sm transition-all duration-300 ${
+                      currentStep >= 2 
+                        ? 'bg-indigo-600 text-white' 
+                        : 'bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
+                    }`}>
+                      2
+                    </div>
+                    <span className={`mt-3 text-sm font-medium transition-all duration-300 ${
+                      currentStep >= 2 ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'
+                    }`}>Review Data</span>
+                  </div>
+                  
+                  <div className="flex flex-col items-center">
+                    <div className={`flex items-center justify-center w-12 h-12 rounded-full text-base font-semibold shadow-sm transition-all duration-300 ${
+                      currentStep >= 3 
+                        ? 'bg-indigo-600 text-white' 
+                        : 'bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
+                    }`}>
+                      3
+                    </div>
+                    <span className={`mt-3 text-sm font-medium transition-all duration-300 ${
+                      currentStep >= 3 ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'
+                    }`}>Categorize</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Step 1: File Upload Section - Show when on step 1 */}
+            {currentStep === 1 && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700 animate-fadeIn">
+                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 py-4 px-6">
+                  <h2 className="text-xl font-semibold text-white">Step 1: Select Excel File</h2>
+                </div>
+                
+                <div className="p-8">
+                  <div className="mb-8">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Upload Excel File</label>
+                    <div 
+                      className="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-10 transition-all duration-200 hover:border-indigo-400 dark:hover:border-indigo-500 bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer"
+                      onClick={() => document.getElementById('file-upload').click()}
+                    >
+                      <input
+                        id="file-upload"
+                        type="file"
+                        accept=".xlsx, .xls"
+                        onChange={handleFileChange}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <div className="text-center">
+                        <FiUpload className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+                        <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+                          {file ? file.name : 'Drag and drop file here, or click to select file'}
+                        </p>
+                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-500">
+                          Supported formats: .xlsx, .xls
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={analyzeFile}
+                    disabled={!file || analyzing}
+                    className={`w-full inline-flex justify-center items-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                      !file || analyzing 
+                        ? 'bg-gray-400 dark:bg-gray-600 opacity-50 cursor-not-allowed' 
+                        : 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900'
+                    } transition-colors duration-200`}
+                  >
+                    {analyzing ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <FiSearch className="mr-2" /> 
+                        Analyze File
+                      </>
                     )}
+                  </button>
+                  
+                  {/* Info Section */}
+                  <div className="mt-6 p-4 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-800/30 rounded-md">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <FiInfo className="h-5 w-5 text-indigo-400 dark:text-indigo-300" />
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="text-sm font-medium text-indigo-800 dark:text-indigo-300">About This Upload</h3>
+                        <div className="mt-2 text-sm text-indigo-700 dark:text-indigo-400">
+                          <p>Your Excel file should contain question data such as question text, options, and answers. In Step 3, you'll select a single Class, Subject, and Chapter that will be applied to <strong>all questions</strong> in this upload.</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                {file && (
-                  <div className="mt-3 flex items-center text-sm text-indigo-600 dark:text-indigo-400">
-                    <FiCheck className="mr-1.5" />
-                    File selected successfully
-                  </div>
-                )}
               </div>
+            )}
+            
+            {/* Step 2: File Analysis Results - Show when on step 2 */}
+            {currentStep === 2 && sheetData && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700 animate-fadeIn">
+                <div className="bg-gradient-to-r from-green-500 to-green-600 py-4 px-6">
+                  <h2 className="text-xl font-semibold text-white">Step 2: Review and Continue</h2>
+                </div>
+                
+                <div className="p-8">
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Sheet</label>
+                    <select
+                      value={selectedSheet}
+                      onChange={(e) => setSelectedSheet(e.target.value)}
+                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-500 dark:focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 sm:text-sm"
+                    >
+                      {sheetData.sheets && sheetData.sheets.map((sheet, idx) => (
+                        <option key={idx} value={sheet}>{sheet}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {/* Sheet Preview */}
+                  <div className="mb-8 border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+                    <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-700">
+                      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Preview {selectedSheet && `(Sheet: ${selectedSheet})`}
+                      </h3>
+                    </div>
+                    
+                    <div className="overflow-x-auto">
+                      {sheetData.headers && sheetData.headers.length > 0 ? (
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                          <thead className="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                              {sheetData.headers.map((header, idx) => (
+                                <th
+                                  key={idx}
+                                  scope="col"
+                                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                                >
+                                  {header}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {/* Handle different data structures for preview */}
+                            {Array.isArray(sheetData.preview) ? (
+                              // If preview is an array of rows 
+                              sheetData.preview.map((row, rowIdx) => (
+                                <tr key={rowIdx} className={rowIdx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}>
+                                  {sheetData.headers.map((header, colIdx) => (
+                                    <td
+                                      key={`${rowIdx}-${colIdx}`}
+                                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+                                    >
+                                      {formatCellContent(header, row[header])}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))
+                            ) : sheetData.preview && typeof sheetData.preview === 'object' && selectedSheet && sheetData.preview[selectedSheet] ? (
+                              // If preview is an object with sheet names as keys
+                              sheetData.preview[selectedSheet].rows.map((row, rowIdx) => (
+                                <tr key={rowIdx} className={rowIdx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}>
+                                  {sheetData.headers.map((header, colIdx) => (
+                                    <td
+                                      key={`${rowIdx}-${colIdx}`}
+                                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+                                    >
+                                      {formatCellContent(header, typeof row === 'object' ? row[header] : row[colIdx])}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))
+                            ) : (
+                              // If we can't display the preview data
+                              <tr>
+                                <td 
+                                  colSpan={sheetData.headers.length}
+                                  className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400"
+                                >
+                                  Preview data could not be displayed. Check the console for data structure.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+                          No headers found in the file
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Info Section */}
+                  <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-md">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <FiInfo className="h-5 w-5 text-blue-400 dark:text-blue-300" />
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300">Information</h3>
+                        <div className="mt-2 text-sm text-blue-700 dark:text-blue-400">
+                          <ul className="list-disc pl-5 space-y-1">
+                            <li>Total rows: {sheetData.totalRows || 0}</li>
+                            <li>Make sure your data matches the expected format</li>
+                            <li><strong>In the next step</strong>, you'll categorize all these questions by selecting a class, subject, and chapter</li>
+                            <li>LaTeX expressions between $ $ symbols will be rendered properly</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={handleContinueToMetadata}
+                    className="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 transition-colors duration-200"
+                  >
+                    <FiCheck className="mr-2" />
+                    Continue to Categorize Questions
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Step 3: Curriculum Selection */}
+            {currentStep === 3 && (
+              <div className="mt-12 animate-fadeIn">
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200 p-6">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                    Curriculum Selection
+                  </h2>
 
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <button
-                  type="button"
-                  onClick={downloadTemplate}
-                  className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 transition-colors duration-200 gap-2"
-                >
-                  <FiDownload className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                  Download Template
-                </button>
+                  {/* Add toggle for using Excel metadata */}
+                  <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <div className="relative">
+                        <input 
+                          type="checkbox" 
+                          className="sr-only" 
+                          checked={useExcelMetadata} 
+                          onChange={() => setUseExcelMetadata(!useExcelMetadata)}
+                        />
+                        <div className={`block w-14 h-8 rounded-full transition-colors duration-200 ${useExcelMetadata ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+                        <div className={`absolute left-1 top-1 bg-white dark:bg-gray-200 w-6 h-6 rounded-full transition-transform duration-200 ${useExcelMetadata ? 'transform translate-x-6' : ''}`}></div>
+                      </div>
+                      <div className="text-gray-700 dark:text-gray-300 font-medium">
+                        Use class, subject, and chapter data from Excel file
+                      </div>
+                    </label>
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                      {useExcelMetadata ? 
+                        "The uploaded data will be imported using class, subject, and chapter values from the Excel file." : 
+                        "Override the Excel file's class, subject, and chapter values with your selections below."}
+                    </p>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={uploadFile}
-                  disabled={!file || uploading}
-                  className={`w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 transition-colors duration-200 gap-2 ${
-                    !file || uploading
-                      ? 'bg-indigo-400 dark:bg-indigo-600 cursor-not-allowed'
-                      : 'bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600'
-                  }`}
-                >
-                  {uploading ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <FiUpload className="h-5 w-5" />
-                      Upload File
-                    </>
+                  {/* Class, Subject, Chapter Selection (only shown if not using Excel metadata) */}
+                  {!useExcelMetadata && (
+                    <div className="space-y-6">
+                      {/* Class Selection */}
+                      <div>
+                        <label htmlFor="class" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Class
+                        </label>
+                        <select
+                          id="class"
+                          value={selectedClass}
+                          onChange={(e) => setSelectedClass(e.target.value)}
+                          className="block w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                        >
+                          <option value="">Select a class</option>
+                          {classes.map((classItem) => (
+                            <option key={classItem.id} value={classItem.id}>
+                              {classItem.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Subject Selection */}
+                      <div>
+                        <label htmlFor="subject" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Subject
+                        </label>
+                        <select
+                          id="subject"
+                          value={selectedSubject}
+                          onChange={(e) => setSelectedSubject(e.target.value)}
+                          disabled={!selectedClass}
+                          className="block w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 disabled:opacity-60"
+                        >
+                          <option value="">Select a subject</option>
+                          {filteredSubjects.map((subject) => (
+                            <option key={subject.id} value={subject.id}>
+                              {subject.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Chapter Selection */}
+                      <div>
+                        <label htmlFor="chapter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Chapter
+                        </label>
+                        <select
+                          id="chapter"
+                          value={selectedChapter}
+                          onChange={(e) => setSelectedChapter(e.target.value)}
+                          disabled={!selectedSubject}
+                          className="block w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 disabled:opacity-60"
+                        >
+                          <option value="">Select a chapter</option>
+                          {filteredChapters.map((chapter) => (
+                            <option key={chapter.id} value={chapter.id}>
+                              {chapter.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                   )}
-                </button>
-              </div>
 
-              {/* Info Section */}
-              <div className="mt-8 p-5 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30 rounded-xl">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <div className="h-10 w-10 rounded-full bg-indigo-100 dark:bg-indigo-800/30 flex items-center justify-center">
-                      <FiInfo className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                  </div>
-                  <div className="ml-4">
-                    <h3 className="text-sm font-medium text-indigo-800 dark:text-indigo-300">About This Upload</h3>
-                    <div className="mt-2 text-sm text-indigo-700 dark:text-indigo-400 space-y-2">
-                      <p>Your Excel file should contain question data such as question text, options, and answers. You'll be able to select a Class, Subject, and Chapter that will be applied to all questions in this upload.</p>
-                      <p>For best results, make sure your Excel file follows the template format.</p>
-                    </div>
+                  {/* Action buttons */}
+                  <div className="flex justify-end gap-3 mt-8">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(2)}
+                      className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 transition-colors duration-200"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={importQuestions}
+                      disabled={importInProgress || (!useExcelMetadata && (!selectedClass || !selectedSubject || !selectedChapter))}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500 focus:ring-offset-indigo-200 text-white rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {importInProgress ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Importing...
+                        </>
+                      ) : (
+                        'Import Questions'
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
         {/* Word Document Upload Tab */}
         {activeTab === 'docx' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-medium text-gray-900 dark:text-white">Upload Word Document</h2>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Upload a Word document (.docx) containing formatted questions. The system will attempt to parse the document structure.
-              </p>
-            </div>
-
-            <div className="p-6">
-              <div className="mb-6">
-                <div
-                  className="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 transition-all duration-200 hover:border-indigo-400 dark:hover:border-indigo-500 bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer group"
-                  onClick={() => document.getElementById('docx-upload').click()}
-                >
-                  <input
-                    id="docx-upload"
-                    type="file"
-                    accept=".docx"
-                    onChange={handleFileChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  <div className="text-center">
-                    <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-900/20 mb-4 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/30 transition-colors">
-                      <FiUpload className="h-8 w-8 text-indigo-500 dark:text-indigo-400" />
-                    </div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {file ? file.name : 'Drag and drop your Word document here'}
-                    </p>
-                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-500">
-                      {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Supported format: .docx (Max 10MB)'}
-                    </p>
-                    {!file && (
-                      <button className="mt-4 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
-                        Browse Files
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {file && (
-                  <div className="mt-3 flex items-center text-sm text-indigo-600 dark:text-indigo-400">
-                    <FiCheck className="mr-1.5" />
-                    File selected successfully
-                  </div>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={uploadFile}
-                disabled={!file || uploading}
-                className={`w-full inline-flex items-center justify-center px-4 py-2.5 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 transition-colors duration-200 gap-2 ${
-                  !file || uploading
-                    ? 'bg-indigo-400 dark:bg-indigo-600 cursor-not-allowed'
-                    : 'bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600'
-                }`}
-              >
-                {uploading ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <FiUpload className="h-5 w-5" />
-                    Upload Document
-                  </>
-                )}
-              </button>
-
-              {/* Info Section */}
-              <div className="mt-8 p-5 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 rounded-xl">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-800/30 flex items-center justify-center">
-                      <FiInfo className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                  </div>
-                  <div className="ml-4">
-                    <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300">Word Document Format</h3>
-                    <div className="mt-2 text-sm text-blue-700 dark:text-blue-400 space-y-2">
-                      <p>For best results, format your Word document with clear question structures:</p>
-                      <ul className="list-disc pl-5 space-y-1">
-                        <li>Each question should be clearly separated</li>
-                        <li>Options should be labeled (A, B, C, D or 1, 2, 3, 4)</li>
-                        <li>Correct answers should be marked</li>
-                        <li>Use consistent formatting throughout the document</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="animate-fadeIn">
+            <DocxUpload 
+              onSuccess={handleDocxUploadSuccess} 
+              onError={handleDocxUploadError} 
+            />
           </div>
         )}
       </div>
 
-      <Notification
-        show={notification.show}
-        message={notification.message}
-        type={notification.type}
-      />
+      {/* Custom Toast Notification - consistent with other pages */}
+      {notification.show && (
+        <div className="fixed bottom-4 right-4 z-[9999] animate-fade-in-up">
+          <div className={`px-6 py-3 rounded-md shadow-xl flex items-center ${
+            notification.type === 'error' 
+                ? 'bg-red-600 text-white' 
+                : notification.type === 'warning'
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-green-600 text-white'
+          }`}>
+            <span className="mr-2">
+              {notification.type === 'error' ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : notification.type === 'warning' ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </span>
+            <p className="text-sm font-medium">{notification.message}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default Upload;
+export default Upload; 

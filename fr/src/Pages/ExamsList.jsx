@@ -4,14 +4,21 @@ import { API_BASE_URL, getAuthHeader } from '../apiConfig';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import Pagination from '../Components/Pagination';
-import { MdPlayArrow, MdEdit, MdDelete, MdRefresh, MdLeaderboard, MdFilterList, MdAdd, MdClear, MdPerson } from 'react-icons/md';
-import ExamCard from '../components/ExamCard';
-import { useAuth } from '../hooks/useAuth.jsx';
-import ConfirmationModal from '../components/ConfirmationModal';
+import { MdPlayArrow, MdEdit, MdDelete, MdRefresh, MdLeaderboard, MdFilterList, MdAdd, MdClear } from 'react-icons/md';
 
 const ExamsList = () => {
+  // No longer need navigate at this level
+  const [user, setUser] = useState(null);
   const location = useLocation();
-  const { user } = useAuth();
+
+  // Get user data from localStorage
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+    }
+  }, []);
 
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -54,62 +61,17 @@ const ExamsList = () => {
       const headers = getAuthHeader();
       console.log('Request headers for exam list:', headers);
 
-      console.log('Making API request to:', `${API_BASE_URL}/api/exams`);
-      console.log('With params:', params);
-
       const response = await axios.get(`${API_BASE_URL}/api/exams`, {
         headers,
         params,
-        timeout: 15000 // 15 second timeout for debugging
+        timeout: 10000 // 10 second timeout for debugging
       });
-
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
 
       console.log('Exams fetched successfully:', response.data.length, 'exams');
       console.log('Exam data:', response.data);
 
       if (Array.isArray(response.data)) {
-        console.log('Setting exams state with array of length:', response.data.length);
         setExams(response.data);
-
-        // Check if we just created or updated an exam
-        const queryParams = new URLSearchParams(location.search);
-
-        // If we just created an exam
-        if (queryParams.get('created')) {
-          // If exams are returned, show a success message
-          if (response.data.length > 0) {
-            // Find the most recently created exam (assuming it's the one we just created)
-            const sortedExams = [...response.data].sort((a, b) =>
-              new Date(b.created_at) - new Date(a.created_at)
-            );
-            const newestExam = sortedExams[0];
-
-            // Set the newly created exam ID for highlighting
-            setNewlyCreatedExamId(newestExam.id);
-
-            // Show a confirmation banner
-            toast.success(
-              <div className="space-y-1">
-                <div className="font-medium">Exam is now available!</div>
-                <div className="text-sm opacity-90">Title: {newestExam.title}</div>
-                <div className="text-sm opacity-90">Questions: {newestExam.question_count || '?'}</div>
-                <div className="text-sm opacity-90">Click on the exam to view details</div>
-              </div>,
-              { duration: 5000, id: 'exam-created-confirmation' }
-            );
-
-            // Clear the highlight after 10 seconds
-            setTimeout(() => {
-              setNewlyCreatedExamId(null);
-            }, 10000);
-          } else {
-            // If no exams are returned, show a warning
-            console.warn('Exam was created but no exams were returned from the server');
-            toast.error('Exam was created but is not showing in the list. Try refreshing the page.');
-          }
-        }
       } else {
         console.error('Expected array of exams but got:', response.data);
         setExams([]);
@@ -127,26 +89,15 @@ const ExamsList = () => {
     }
   }, [filters]);
 
-  // State to track newly created exam for highlighting
-  const [newlyCreatedExamId, setNewlyCreatedExamId] = useState(null);
-
-  // State for delete confirmation modal
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [examToDelete, setExamToDelete] = useState(null);
-
   // Check for query parameters that indicate we should refresh the list
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const created = queryParams.get('created');
-    const timestamp = queryParams.get('timestamp');
-
-    console.log('URL query parameters:', { created, timestamp });
-
+    
     if (created) {
       // If we have a 'created' parameter, show a success message
       toast.success('Exam created successfully! Refreshing list...');
       // Force a refresh of the exam list
-      console.log('Forcing exam list refresh due to created parameter');
       fetchExams();
     }
   }, [location.search, fetchExams]);
@@ -238,30 +189,21 @@ const ExamsList = () => {
     });
   };
 
-  // Show delete confirmation modal
-  const confirmDeleteExam = (examId) => {
-    const exam = exams.find(e => e.id === examId);
-    setExamToDelete(exam);
-    setShowDeleteModal(true);
-  };
-
   // Handle exam deletion
-  const handleDeleteExam = async () => {
-    if (!examToDelete) return;
+  const handleDeleteExam = async (examId) => {
+    if (!window.confirm('Are you sure you want to delete this exam? This action cannot be undone.')) {
+      return;
+    }
 
     try {
-      await axios.delete(`${API_BASE_URL}/api/exams/${examToDelete.id}`, {
+      await axios.delete(`${API_BASE_URL}/api/exams/${examId}`, {
         headers: getAuthHeader()
       });
 
       toast.success('Exam deleted successfully');
 
       // Update the list
-      setExams(exams.filter(exam => exam.id !== examToDelete.id));
-
-      // Close the modal
-      setShowDeleteModal(false);
-      setExamToDelete(null);
+      setExams(exams.filter(exam => exam.id !== examId));
     } catch (error) {
       console.error('Error deleting exam:', error);
       toast.error('Failed to delete exam');
@@ -336,11 +278,8 @@ const ExamsList = () => {
       }
     };
 
-    // Check if this is the newly created exam
-    const isNewlyCreated = exam.id === newlyCreatedExamId;
-
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-md border ${isNewlyCreated ? 'border-green-400 dark:border-green-500 ring-2 ring-green-400 dark:ring-green-500' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'} shadow-sm hover:shadow-md transition-all duration-200 flex flex-col h-full ${isNewlyCreated ? 'animate-pulse-light' : ''}`}>
+      <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col h-full">
         {/* Header with Exam info */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-wrap justify-between items-start">
@@ -348,26 +287,28 @@ const ExamsList = () => {
             <div className="flex-1">
               <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1 line-clamp-1">{exam.title}</h3>
               <div className="flex flex-wrap items-center gap-2 text-sm">
-                {exam.course_name && (
-                  <span className="text-gray-500 dark:text-gray-400">{exam.course_name}</span>
+                {exam.class_name && (
+                  <span className="text-gray-500 dark:text-gray-400">{exam.class_name}</span>
                 )}
 
-                {exam.chapter_names && (
+                {exam.subject_name && (
                   <>
                     <span className="text-gray-300 dark:text-gray-600">•</span>
-                    <span className="text-gray-500 dark:text-gray-400">{exam.chapter_names}</span>
+                    <span className="text-gray-500 dark:text-gray-400">{exam.subject_name}</span>
+                  </>
+                )}
+
+                {exam.chapter_name && (
+                  <>
+                    <span className="text-gray-300 dark:text-gray-600">•</span>
+                    <span className="text-gray-500 dark:text-gray-400">{exam.chapter_name}</span>
                   </>
                 )}
               </div>
             </div>
 
             {/* Right side - Status tag */}
-            <div className="flex items-center gap-2">
-              {isNewlyCreated && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400">
-                  New
-                </span>
-              )}
+            <div>
               <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${getStatusClasses(status)}`}>
                 {status}
               </span>
@@ -443,7 +384,7 @@ const ExamsList = () => {
                 </button>
 
                 <button
-                  onClick={() => confirmDeleteExam(exam.id)}
+                  onClick={() => handleDeleteExam(exam.id)}
                   className="w-full sm:w-auto px-3 py-1.5 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 rounded-md text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors flex items-center justify-center gap-1.5 border border-red-200 dark:border-red-800/30"
                 >
                   <MdDelete className="text-base" />
@@ -458,230 +399,169 @@ const ExamsList = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 bg-white dark:bg-gray-900">
       {/* Page Header */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-8 overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5">
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Exams</h1>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Manage and view all your exams in one place
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3 self-end sm:self-auto">
-              {/* Only show Create Exam button for non-student users */}
-              {user?.role !== 'student' && (
-                <Link
-                  to="/exams/create"
-                  className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
-                >
-                  <MdAdd className="text-lg" />
-                  Create Exam
-                </Link>
-              )}
-            </div>
-          </div>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5 mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1">Exams</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {exams.length} Exams · {countUniqueSubjects()} Subjects
+          </p>
         </div>
 
-        <div className="px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-            <span className="font-medium">{exams.length}</span> Exams
-            {countUniqueSubjects() > 0 && (
-              <>
-                <span className="mx-1">•</span>
-                <span className="font-medium">{countUniqueSubjects()}</span> Subjects
-              </>
-            )}
-          </div>
+        <div className="flex items-center gap-3 self-end sm:self-auto">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5 border border-gray-200 dark:border-gray-700"
+          >
+            <MdFilterList className="text-base" />
+            {showFilters ? 'Hide Filters' : 'Show Filters'}
+          </button>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="px-4 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 border border-gray-300 dark:border-gray-600 shadow-sm flex-1 sm:flex-initial justify-center sm:justify-start"
-            >
-              <MdFilterList className="text-lg" />
-              {showFilters ? 'Hide Filters' : 'Filters'}
-            </button>
+          <button
+            onClick={fetchExams}
+            className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5 border border-gray-200 dark:border-gray-700"
+            title="Refresh exam list"
+          >
+            <MdRefresh className="text-base" />
+            Refresh
+          </button>
 
-            <button
-              onClick={() => {
-                console.log('Manual refresh requested');
-                toast.success('Refreshing exam list...');
-                fetchExams();
-              }}
-              className="px-4 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 border border-gray-300 dark:border-gray-600 shadow-sm flex-1 sm:flex-initial justify-center sm:justify-start"
-              title="Refresh exam list"
+          {/* Only show Create Exam button for non-student users */}
+          {user?.role !== 'student' && (
+            <Link
+              to="/exams/create"
+              className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-1.5"
             >
-              <MdRefresh className="text-lg" />
-              Refresh
-            </button>
-          </div>
+              <MdAdd className="text-base" />
+              Create Exam
+            </Link>
+          )}
         </div>
       </div>
 
       {/* Filters Panel */}
       {showFilters && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-8 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <div className="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
+          <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-medium text-gray-900 dark:text-white">Filter Exams</h3>
             <button
               onClick={clearFilters}
-              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors flex items-center gap-1.5"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors flex items-center gap-1"
             >
               <MdClear className="text-base" />
-              Clear All
+              Clear Filters
             </button>
           </div>
 
-          <div className="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {/* Class filter */}
             <div className="flex flex-col">
-              <label htmlFor="class_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              <label htmlFor="class_id" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Class
               </label>
-              <div className="relative">
-                <select
-                  id="class_id"
-                  name="class_id"
-                  value={filters.class_id}
-                  onChange={handleFilterChange}
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none shadow-sm"
-                >
-                  <option value="">All Classes</option>
-                  {classes.map((classItem) => (
-                    <option key={classItem.id} value={classItem.id}>
-                      {classItem.name}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Filter exams by class
-              </p>
+              <select
+                id="class_id"
+                name="class_id"
+                value={filters.class_id}
+                onChange={handleFilterChange}
+                className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Classes</option>
+                {classes.map((classItem) => (
+                  <option key={classItem.id} value={classItem.id}>
+                    {classItem.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Subject filter */}
             <div className="flex flex-col">
-              <label htmlFor="subject_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              <label htmlFor="subject_id" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Subject
               </label>
-              <div className="relative">
-                <select
-                  id="subject_id"
-                  name="subject_id"
-                  value={filters.subject_id}
-                  onChange={handleFilterChange}
-                  className={`w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none shadow-sm ${!filters.class_id ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  disabled={!filters.class_id}
-                >
-                  <option value="">All Subjects</option>
-                  {filteredSubjects.map((subject) => (
-                    <option key={subject.id} value={subject.id}>
-                      {subject.name}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {!filters.class_id ? 'Select a class first' : 'Filter exams by subject'}
-              </p>
+              <select
+                id="subject_id"
+                name="subject_id"
+                value={filters.subject_id}
+                onChange={handleFilterChange}
+                className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                disabled={!filters.class_id}
+              >
+                <option value="">All Subjects</option>
+                {filteredSubjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Chapter filter */}
             <div className="flex flex-col">
-              <label htmlFor="chapter_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              <label htmlFor="chapter_id" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Chapter
               </label>
-              <div className="relative">
-                <select
-                  id="chapter_id"
-                  name="chapter_id"
-                  value={filters.chapter_id}
-                  onChange={handleFilterChange}
-                  className={`w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none shadow-sm ${!filters.subject_id ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  disabled={!filters.subject_id}
-                >
-                  <option value="">All Chapters</option>
-                  {filteredChapters.map((chapter) => (
-                    <option key={chapter.id} value={chapter.id}>
-                      {chapter.name}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {!filters.subject_id ? 'Select a subject first' : 'Filter exams by chapter'}
-              </p>
+              <select
+                id="chapter_id"
+                name="chapter_id"
+                value={filters.chapter_id}
+                onChange={handleFilterChange}
+                className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                disabled={!filters.subject_id}
+              >
+                <option value="">All Chapters</option>
+                {filteredChapters.map((chapter) => (
+                  <option key={chapter.id} value={chapter.id}>
+                    {chapter.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
       )}
 
       {/* Exams Grid */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {loading ? (
-          <div className="flex justify-center items-center py-24">
-            <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">Loading exams...</span>
+          <div className="col-span-full flex justify-center items-center py-12">
+            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : exams.length === 0 ? (
-          <div className="py-16 px-6 text-center">
+          <div className="col-span-full bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700 p-6 text-center">
             <div className="max-w-md mx-auto">
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No exams found</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <p className="text-gray-500 dark:text-gray-400 mb-2">No exams found</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 {Object.values(filters).some(v => v !== '')
-                  ? 'No exams match your current filters. Try adjusting your filters or create a new exam.'
-                  : 'Get started by creating your first exam to begin testing your students.'}
+                  ? 'Try adjusting your filters or create a new exam.'
+                  : 'Get started by creating your first exam.'}
               </p>
               {user?.role !== 'student' && (
                 <Link
                   to="/exams/create"
-                  className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors inline-flex items-center gap-2 shadow-sm"
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5"
                 >
-                  <MdAdd className="text-lg" />
+                  <MdAdd className="text-base" />
                   Create New Exam
                 </Link>
               )}
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
-            {getPaginatedExams().map(exam => (
-              <ExamCard
-                key={exam.id}
-                exam={exam}
-                isNewlyCreated={exam.id === newlyCreatedExamId}
-              />
-            ))}
-          </div>
+          getPaginatedExams().map(exam => (
+            <ExamCard key={exam.id} exam={exam} />
+          ))
         )}
       </div>
 
       {/* Pagination */}
       {exams.length > 0 && (
-        <div className="mt-8 bg-white dark:bg-gray-800 px-6 py-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="mt-6 bg-white dark:bg-gray-800 p-4 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm">
           <Pagination
             currentPage={currentPage}
             totalCount={exams.length}
@@ -690,21 +570,6 @@ const ExamsList = () => {
           />
         </div>
       )}
-
-      {/* Delete Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setExamToDelete(null);
-        }}
-        onConfirm={handleDeleteExam}
-        title="Delete Exam"
-        message={`Are you sure you want to delete ${examToDelete?.title || 'this exam'}? This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
-        confirmButtonClass="bg-red-600 hover:bg-red-700"
-      />
     </div>
   );
 };

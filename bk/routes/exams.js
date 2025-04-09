@@ -8,11 +8,6 @@ const isAdmin = (user) => {
   return user && user.role === 'admin';
 };
 
-// Helper function to check if user can manage exams (admin or teacher)
-const canManageExams = (user) => {
-  return user && (user.role === 'admin' || user.role === 'teacher');
-};
-
 // Helper function to check if user can access a specific route
 const canAccessRoute = (user, allowedRoles) => {
   if (!user) return false;
@@ -20,11 +15,9 @@ const canAccessRoute = (user, allowedRoles) => {
   return allowedRoles.includes(user.role);
 };
 
-// Get exam count - Available to all authenticated users
+// Get exam count
 router.get('/count', authMiddleware, async (req, res) => {
   try {
-    console.log('Fetching exam count for user:', req.user ? `ID: ${req.user.id}, Role: ${req.user.role}` : 'Not authenticated');
-
     // Count total exams
     const result = await pool.query('SELECT COUNT(*) FROM exams');
     const count = parseInt(result.rows[0].count) || 0;
@@ -40,7 +33,6 @@ router.get('/count', authMiddleware, async (req, res) => {
       count,
       activeExams
     });
-    console.log('Successfully returned exam count:', { count, activeExams });
   } catch (error) {
     console.error('Error counting exams:', error);
     res.status(500).json({ message: 'Failed to count exams', count: 0 });
@@ -60,11 +52,7 @@ router.get('/', authMiddleware, async (req, res) => {
       SELECT e.*,
              c.name as course_name,
              u.name as created_by_name,
-             (SELECT COUNT(*) FROM exam_questions WHERE exam_id = e.id) as question_count,
-             (SELECT STRING_AGG(ch.name, ', ')
-              FROM exam_chapters ec
-              JOIN chapters ch ON ec.chapter_id = ch.id
-              WHERE ec.exam_id = e.id) as chapter_names
+             (SELECT COUNT(*) FROM exam_questions WHERE exam_id = e.id) as question_count
       FROM exams e
       LEFT JOIN courses c ON e.course_id = c.id
       LEFT JOIN users u ON e.created_by = u.id
@@ -91,28 +79,8 @@ router.get('/', authMiddleware, async (req, res) => {
     console.log('Executing query:', query);
     console.log('Query params:', queryParams);
 
-    // Check if there are any exams in the database before running the query
-    const countCheck = await pool.query('SELECT COUNT(*) FROM exams');
-    console.log(`Total exams in database before query: ${countCheck.rows[0].count}`);
-
-    if (parseInt(countCheck.rows[0].count) === 0) {
-      console.log('No exams found in the database at all');
-      return res.json([]);
-    }
-
     const result = await pool.query(query, queryParams);
-    console.log(`Query returned ${result.rows.length} exams`);
-
-    // Log the first exam for debugging if available
-    if (result.rows.length > 0) {
-      console.log('First exam:', {
-        id: result.rows[0].id,
-        title: result.rows[0].title,
-        course_id: result.rows[0].course_id,
-        created_by: result.rows[0].created_by,
-        created_at: result.rows[0].created_at
-      });
-    }
+    console.log(`Found ${result.rows.length} exams`);
 
     if (result.rows.length === 0) {
       console.log('No exams found. Checking if exams table has any records...');
@@ -133,7 +101,6 @@ router.get('/', authMiddleware, async (req, res) => {
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const examId = req.params.id;
-    console.log('Fetching exam with ID:', examId);
 
     // Get exam details
     const examQuery = `
@@ -149,98 +116,41 @@ router.get('/:id', authMiddleware, async (req, res) => {
     const examResult = await pool.query(examQuery, [examId]);
 
     if (examResult.rows.length === 0) {
-      console.log('Exam not found with ID:', examId);
       return res.status(404).json({ message: 'Exam not found' });
     }
 
-    console.log('Exam found, processing data...');
-
-    // Wrap all database operations in try-catch blocks to handle errors gracefully
-
     const exam = examResult.rows[0];
 
-    // Add default values for any missing columns
-    // Basic Settings
-    if (exam.introduction === undefined) exam.introduction = '';
-
-    // Question Settings
-    if (exam.pagination_type === undefined) exam.pagination_type = 'all';
-    if (exam.allow_blank_answers === undefined) exam.allow_blank_answers = true;
-
-    // Review Settings
-    if (exam.conclusion_text === undefined) exam.conclusion_text = '';
-    if (exam.show_custom_result_message === undefined) exam.show_custom_result_message = false;
-    if (exam.pass_message === undefined) exam.pass_message = '';
-    if (exam.fail_message === undefined) exam.fail_message = '';
-    if (exam.passing_score === undefined) exam.passing_score = 60;
-    if (exam.show_score === undefined) exam.show_score = true;
-    if (exam.show_test_outline === undefined) exam.show_test_outline = true;
-    if (exam.show_correct_incorrect === undefined) exam.show_correct_incorrect = true;
-    if (exam.show_correct_answer === undefined) exam.show_correct_answer = true;
-    if (exam.show_explanation === undefined) exam.show_explanation = true;
-
-    // Access Control
-    if (exam.access_type === undefined) exam.access_type = 'anyone';
-    if (exam.access_passcode === undefined) exam.access_passcode = '';
-    if (exam.identifier_list === undefined) exam.identifier_list = [];
-    if (exam.email_list === undefined) exam.email_list = [];
-    if (exam.time_limit_type === undefined) exam.time_limit_type = 'specified';
-    if (exam.attempt_limit_type === undefined) exam.attempt_limit_type = 'unlimited';
-    if (exam.max_attempts === undefined) exam.max_attempts = 1;
-    if (exam.identifier_prompt === undefined) exam.identifier_prompt = 'Enter your name';
-
-    // Browser Settings
-    if (exam.disable_right_click === undefined) exam.disable_right_click = false;
-    if (exam.disable_copy_paste === undefined) exam.disable_copy_paste = false;
-    if (exam.disable_translate === undefined) exam.disable_translate = false;
-    if (exam.disable_autocomplete === undefined) exam.disable_autocomplete = false;
-    if (exam.disable_spellcheck === undefined) exam.disable_spellcheck = false;
-    if (exam.disable_printing === undefined) exam.disable_printing = false;
-
-    console.log('Added default values for missing columns');
-
     // Get exam chapters
-    try {
-      const chaptersQuery = `
-        SELECT ch.*, ec.id as exam_chapter_id, s.name as subject_name, c.name as class_name
-        FROM exam_chapters ec
-        JOIN chapters ch ON ec.chapter_id = ch.id
-        JOIN subjects s ON ch.subject_id = s.id
-        JOIN classes c ON s.class_id = c.id
-        WHERE ec.exam_id = $1
-      `;
+    const chaptersQuery = `
+      SELECT ch.*, ec.id as exam_chapter_id, s.name as subject_name, c.name as class_name
+      FROM exam_chapters ec
+      JOIN chapters ch ON ec.chapter_id = ch.id
+      JOIN subjects s ON ch.subject_id = s.id
+      JOIN classes c ON s.class_id = c.id
+      WHERE ec.exam_id = $1
+    `;
 
-      const chaptersResult = await pool.query(chaptersQuery, [examId]);
-      exam.chapters = chaptersResult.rows;
-      console.log(`Found ${exam.chapters.length} chapters for exam ID ${examId}`);
-    } catch (chaptersError) {
-      console.error('Error fetching exam chapters:', chaptersError);
-      // Don't fail the whole request, just set empty chapters
-      exam.chapters = [];
-    }
+    const chaptersResult = await pool.query(chaptersQuery, [examId]);
+    exam.chapters = chaptersResult.rows;
 
     // Get exam questions with full details
-    try {
-      const questionsQuery = `
-        SELECT q.id, q.ques, q.option_a, q.option_b, q.option_c, q.option_d,
-               q.answer as correct_option,
-               q.explanation, q.difficulty_level, q.reference, q.topic,
-               q.chapter as chapter_name, q.subject as subject_name, q.classname as class_name,
-               eq.marks, eq.question_order
-        FROM exam_questions eq
-        JOIN questions q ON eq.question_id = q.id
-        WHERE eq.exam_id = $1
-        ORDER BY eq.question_order
-      `;
+    const questionsQuery = `
+      SELECT q.id, q.ques, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option,
+             q.explanation, q.difficulty_level, q.reference, q.topic,
+             eq.marks, eq.question_order,
+             ch.name as chapter_name, s.name as subject_name, c.name as class_name
+      FROM exam_questions eq
+      JOIN questions q ON eq.question_id = q.id
+      LEFT JOIN chapters ch ON q.chapter_id = ch.id
+      LEFT JOIN subjects s ON ch.subject_id = s.id
+      LEFT JOIN classes c ON s.class_id = c.id
+      WHERE eq.exam_id = $1
+      ORDER BY eq.question_order
+    `;
 
-      const questionsResult = await pool.query(questionsQuery, [examId]);
-      exam.questions = questionsResult.rows;
-      console.log(`Found ${exam.questions.length} questions for exam ID ${examId}`);
-    } catch (questionsError) {
-      console.error('Error fetching exam questions:', questionsError);
-      // Don't fail the whole request, just set empty questions
-      exam.questions = [];
-    }
+    const questionsResult = await pool.query(questionsQuery, [examId]);
+    exam.questions = questionsResult.rows;
 
     res.json(exam);
   } catch (error) {
@@ -249,40 +159,24 @@ router.get('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Create new exam - Admin and teachers only
+// Create new exam - Admin only
 router.post('/', authMiddleware, async (req, res) => {
   console.log('Create exam request received');
   console.log('User:', req.user);
   console.log('Request body:', req.body);
-  // Check if user is admin or teacher
-  console.log('Checking if user is admin or teacher:', req.user);
+  // Check if user is admin
+  console.log('Checking if user is admin:', req.user);
   if (!req.user) {
     console.log('No user found in request');
     return res.status(401).json({ message: 'Authentication required' });
   }
 
-  if (req.user.role !== 'admin' && req.user.role !== 'teacher') {
-    console.log('User is not authorized, role:', req.user.role);
-    return res.status(403).json({ message: 'Access denied. Only administrators and teachers can create exams.' });
+  if (!isAdmin(req.user)) {
+    console.log('User is not admin, role:', req.user.role);
+    return res.status(403).json({ message: 'Access denied. Only administrators can create exams.' });
   }
 
   console.log('Admin check passed, proceeding with exam creation');
-
-  // Validate required fields
-  const requiredFields = ['title', 'course_id', 'questions'];
-  const missingFields = requiredFields.filter(field => {
-    const value = req.body[field];
-    return value === undefined || value === null || value === '' ||
-           (Array.isArray(value) && value.length === 0);
-  });
-
-  if (missingFields.length > 0) {
-    console.error('Missing required fields:', missingFields);
-    return res.status(400).json({
-      message: `Missing required fields: ${missingFields.join(', ')}`,
-      missingFields
-    });
-  }
 
   const client = await pool.connect();
 
@@ -439,43 +333,7 @@ router.post('/', authMiddleware, async (req, res) => {
       console.log('New exam ID:', examId);
     } catch (insertError) {
       console.error('Error inserting exam:', insertError);
-
-      // Check if the error is related to missing columns
-      if (insertError.message && insertError.message.includes('column') && insertError.message.includes('does not exist')) {
-        console.log('Database schema error detected. Trying with basic fields only...');
-
-        // Create a simplified query with only the basic fields
-        const basicExamQuery = `
-          INSERT INTO exams (
-            title, description, start_datetime, end_datetime,
-            negative_marking, negative_percentage, shuffle_questions,
-            can_change_answer, syllabus, duration_minutes, total_marks,
-            course_id, created_by
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-          RETURNING *
-        `;
-
-        const basicExamValues = [
-          title, description, start_datetime, end_datetime,
-          negative_marking, negative_percentage, shuffle_questions,
-          can_change_answer, syllabus, duration_minutes, total_marks,
-          course_id, req.user.id
-        ];
-
-        try {
-          console.log('Executing basic exam insert query with values:', basicExamValues);
-          const basicExamResult = await client.query(basicExamQuery, basicExamValues);
-          console.log('Basic exam inserted successfully');
-          examId = basicExamResult.rows[0].id;
-          console.log('New basic exam ID:', examId);
-        } catch (basicInsertError) {
-          console.error('Error inserting basic exam:', basicInsertError);
-          throw basicInsertError; // Re-throw to be caught by the outer catch block
-        }
-      } else {
-        throw insertError; // Re-throw to be caught by the outer catch block
-      }
+      throw insertError; // Re-throw to be caught by the outer catch block
     }
 
     // Add chapters to exam
@@ -550,29 +408,6 @@ router.post('/', authMiddleware, async (req, res) => {
       const verifyResult = await pool.query('SELECT COUNT(*) FROM exams WHERE id = $1', [examId]);
       console.log(`Verification query shows ${verifyResult.rows[0].count} exams with ID ${examId}`);
 
-      // Double check that the exam can be retrieved with the main query used by the GET endpoint
-      try {
-        const verifyQuery = `
-          SELECT e.*,
-                 c.name as course_name,
-                 u.name as created_by_name,
-                 (SELECT COUNT(*) FROM exam_questions WHERE exam_id = e.id) as question_count
-          FROM exams e
-          LEFT JOIN courses c ON e.course_id = c.id
-          LEFT JOIN users u ON e.created_by = u.id
-          WHERE e.id = $1
-        `;
-        const verifyDetailResult = await pool.query(verifyQuery, [examId]);
-        console.log(`Verification detail query returned ${verifyDetailResult.rows.length} rows`);
-        if (verifyDetailResult.rows.length > 0) {
-          console.log('Exam can be retrieved with the main query');
-        } else {
-          console.warn('Exam cannot be retrieved with the main query - this may cause issues with listing');
-        }
-      } catch (verifyError) {
-        console.error('Error verifying exam with main query:', verifyError);
-      }
-
       res.status(201).json(newExam);
     } catch (fetchError) {
       console.error('Error fetching created exam:', fetchError);
@@ -584,46 +419,17 @@ router.post('/', authMiddleware, async (req, res) => {
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error creating exam:', error);
-
-    // Provide more detailed error information
-    let statusCode = 500;
-    let errorMessage = 'Server error';
-
-    // Check for specific error types
-    if (error.code === '23505') {
-      // Unique violation
-      statusCode = 409;
-      errorMessage = 'An exam with this title already exists';
-    } else if (error.code === '23503') {
-      // Foreign key violation
-      statusCode = 400;
-      errorMessage = 'Invalid reference: The course, chapter, or question ID does not exist';
-    } else if (error.code === '22P02') {
-      // Invalid text representation
-      statusCode = 400;
-      errorMessage = 'Invalid data format';
-    } else if (error.message.includes('validation')) {
-      // Validation error
-      statusCode = 400;
-      errorMessage = error.message;
-    }
-
-    console.error('Sending error response:', { statusCode, message: errorMessage, details: error.message });
-    res.status(statusCode).json({
-      message: errorMessage,
-      details: error.message,
-      code: error.code || 'UNKNOWN'
-    });
+    res.status(500).json({ message: 'Server error', error: error.message });
   } finally {
     client.release();
   }
 });
 
-// Update exam - Admin and teachers only
+// Update exam - Admin only
 router.put('/:id', authMiddleware, async (req, res) => {
-  // Check if user is admin or teacher
-  if (req.user.role !== 'admin' && req.user.role !== 'teacher') {
-    return res.status(403).json({ message: 'Access denied. Only administrators and teachers can update exams.' });
+  // Check if user is admin
+  if (!isAdmin(req.user)) {
+    return res.status(403).json({ message: 'Access denied. Only administrators can update exams.' });
   }
 
   const client = await pool.connect();
@@ -809,11 +615,11 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Delete exam - Admin and teachers only
+// Delete exam - Admin only
 router.delete('/:id', authMiddleware, async (req, res) => {
-  // Check if user is admin or teacher
-  if (req.user.role !== 'admin' && req.user.role !== 'teacher') {
-    return res.status(403).json({ message: 'Access denied. Only administrators and teachers can delete exams.' });
+  // Check if user is admin
+  if (!isAdmin(req.user)) {
+    return res.status(403).json({ message: 'Access denied. Only administrators can delete exams.' });
   }
 
   try {
@@ -836,11 +642,11 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Recalculate exam scores after answer changes - Admin and teachers only
+// Recalculate exam scores after answer changes - Admin only
 router.post('/:id/recalculate', authMiddleware, async (req, res) => {
-  // Check if user is admin or teacher
-  if (req.user.role !== 'admin' && req.user.role !== 'teacher') {
-    return res.status(403).json({ message: 'Access denied. Only administrators and teachers can recalculate exam scores.' });
+  // Check if user is admin
+  if (!isAdmin(req.user)) {
+    return res.status(403).json({ message: 'Access denied. Only administrators can recalculate exam scores.' });
   }
 
   const client = await pool.connect();
@@ -1568,7 +1374,16 @@ router.post('/:id/verify-access', authMiddleware, async (req, res) => {
   }
 });
 
-// Endpoint moved to the top of the file to avoid route conflicts
+// Get total exams count for dashboard
+router.get('/count', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*) FROM exams');
+    res.json({ count: parseInt(result.rows[0].count) });
+  } catch (error) {
+    console.error('Error counting exams:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
 
 // Get exam leaderboard - Available to all users
 router.get('/:id/leaderboard', authMiddleware, async (req, res) => {

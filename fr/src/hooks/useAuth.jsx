@@ -1,4 +1,3 @@
-import React from 'react';
 import { useState, useEffect, useContext, createContext, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -15,7 +14,7 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const navigationInProgress = useRef(false);
   const navigate = useNavigate();
-
+  
   // Create a safer navigation function that throttles navigation attempts
   const safeNavigate = useCallback((path) => {
     // Prevent navigation if one is already in progress
@@ -23,16 +22,16 @@ export const AuthProvider = ({ children }) => {
       console.log('Navigation already in progress, ignoring new request');
       return;
     }
-
+    
     // Set navigation lock
     navigationInProgress.current = true;
-
+    
     try {
       // Use React Router's navigate with replace option to avoid browser history issues
       navigate(path, { replace: true });
     } catch (error) {
       console.warn('Navigation error - using fallback', error);
-
+      
       // Fallback to window.location if navigate fails
       try {
         window.location.href = path;
@@ -40,7 +39,7 @@ export const AuthProvider = ({ children }) => {
         console.error('Failed to navigate using window.location', windowError);
       }
     }
-
+    
     // Clear navigation lock after a delay
     setTimeout(() => {
       navigationInProgress.current = false;
@@ -52,7 +51,7 @@ export const AuthProvider = ({ children }) => {
     const checkLoginStatus = async () => {
       // If we're in the process of checking, don't check again
       if (isLoading && navigationInProgress.current) return;
-
+      
       const token = localStorage.getItem('token');
       if (!token) {
         setIsLoading(false);
@@ -63,7 +62,7 @@ export const AuthProvider = ({ children }) => {
         // Try to decode the token to verify it client-side
         const payload = JSON.parse(atob(token.split('.')[1]));
         const isTokenExpired = Date.now() >= payload.exp * 1000;
-
+        
         if (isTokenExpired) {
           console.log('Token has expired');
           localStorage.removeItem('token');
@@ -73,13 +72,13 @@ export const AuthProvider = ({ children }) => {
           // Get user data from localStorage if available
           const storedUser = localStorage.getItem('user');
           let userData = null;
-
+          
           try {
             userData = storedUser ? JSON.parse(storedUser) : null;
           } catch (e) {
             console.error('Error parsing user data from localStorage:', e);
           }
-
+          
           // Token is valid, set user info
           setUser(userData || {
             id: payload.id,
@@ -92,7 +91,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       }
-
+      
       setIsLoading(false);
     };
 
@@ -102,17 +101,17 @@ export const AuthProvider = ({ children }) => {
   // Login function - only navigate on success
   const login = async (credentials) => {
     setIsLoading(true);
-
+    
     try {
       const response = await axios.post(`${API_BASE_URL}/api/auth/login`, credentials);
       const { token, user } = response.data;
-
+      
       if (token) {
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
         setUser(user);
         setIsAuthenticated(true);
-
+        
         // Only navigate if we successfully logged in
         safeNavigate('/');
         return user;
@@ -123,14 +122,14 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-
+    
     return null;
   };
 
   // Logout function with debounce
   const logout = useCallback(() => {
     if (navigationInProgress.current) return;
-
+    
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
@@ -141,11 +140,11 @@ export const AuthProvider = ({ children }) => {
   // Register function
   const register = async (userData) => {
     setIsLoading(true);
-
+    
     try {
       const response = await axios.post(`${API_BASE_URL}/api/auth/signup`, userData);
       const { token, user } = response.data;
-
+      
       if (token) {
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
@@ -160,7 +159,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-
+    
     return null;
   };
 
@@ -173,7 +172,7 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.put(`${API_BASE_URL}/api/users/profile`, userData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
+      
       if (response.data && response.data.user) {
         setUser(response.data.user);
         localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -183,7 +182,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Profile update failed:', error);
       throw error;
     }
-
+    
     return null;
   };
 
@@ -216,4 +215,4 @@ export const useAuth = () => {
   return context;
 };
 
-export default useAuth;
+export default useAuth; 

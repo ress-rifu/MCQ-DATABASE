@@ -3,10 +3,6 @@ import { API_BASE_URL, getAuthHeader } from '../apiConfig';
 import axios from 'axios';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import CautionModal from '../components/CautionModal';
-
-// Log API URL for debugging
-console.log('API_BASE_URL in CreateExam:', API_BASE_URL);
 import SimpleRichTextEditor from '../components/SimpleRichTextEditor';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -117,10 +113,6 @@ const CreateExam = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
 
-  // State for caution modal
-  const [showCautionModal, setShowCautionModal] = useState(false);
-  const [cautionsList, setCautionsList] = useState([]);
-
   // Load user data
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -157,72 +149,15 @@ const CreateExam = () => {
           const chapterIds = examData.chapters ? examData.chapters.map(ch => ch.id) : [];
           examData.chapters = chapterIds;
 
-          // Ensure all form fields have default values
-          const completeFormData = {
-            ...formData, // Start with the default values
-            ...examData,  // Override with the exam data
-            // Ensure these fields are properly set
-            start_datetime: new Date(examData.start_datetime),
-            end_datetime: new Date(examData.end_datetime),
-            chapters: examData.chapters || [],
-            negative_marking: examData.negative_marking || false,
-            negative_percentage: examData.negative_percentage || 0,
-            shuffle_questions: examData.shuffle_questions || false,
-            can_change_answer: examData.can_change_answer !== undefined ? examData.can_change_answer : true,
-            disable_right_click: examData.disable_right_click || false,
-            disable_copy_paste: examData.disable_copy_paste || false,
-            disable_translate: examData.disable_translate || false,
-            disable_autocomplete: examData.disable_autocomplete || false,
-            disable_spellcheck: examData.disable_spellcheck || false,
-            disable_printing: examData.disable_printing || false,
-            show_custom_result_message: examData.show_custom_result_message || false,
-            pass_message: examData.pass_message || '',
-            fail_message: examData.fail_message || '',
-            show_correct_answers: examData.show_correct_answers || false,
-            show_score: examData.show_score !== undefined ? examData.show_score : true,
-            show_percentage: examData.show_percentage !== undefined ? examData.show_percentage : true,
-            show_pass_fail: examData.show_pass_fail !== undefined ? examData.show_pass_fail : true,
-            passing_score: examData.passing_score || 40
-          };
-
-          console.log('Setting form data with complete values:', completeFormData);
-          setFormData(completeFormData);
-          // Set selected questions
-          if (examData.questions && Array.isArray(examData.questions)) {
-            setSelectedQuestions(examData.questions.map(q => ({
-              ...q,
-              marks: q.marks || 1,  // Ensure marks is set
-              // Ensure these fields are present
-              chapter_name: q.chapter_name || q.chapter || '',
-              subject_name: q.subject_name || q.subject || '',
-              class_name: q.class_name || q.classname || ''
-            })));
-          } else {
-            console.warn('No questions found in exam data or questions is not an array');
-            setSelectedQuestions([]);
-          }
+          setFormData(examData);
+          setSelectedQuestions(examData.questions.map(q => ({
+            ...q,
+            marks: q.marks || 1  // Ensure marks is set
+          })));
           setInitialDataLoaded(true);
         } catch (error) {
           console.error('Error fetching exam data:', error);
-
-          // Log detailed error information
-          if (error.response) {
-            console.error('Error response data:', error.response.data);
-            console.error('Error response status:', error.response.status);
-            console.error('Error response headers:', error.response.headers);
-            toast.error(`Failed to load exam data: ${error.response.data.message || 'Unknown error'}`);
-          } else if (error.request) {
-            console.error('No response received:', error.request);
-            toast.error('No response received from server. Please check your connection.');
-          } else {
-            console.error('Error setting up request:', error.message);
-            toast.error(`Error: ${error.message}`);
-          }
-
-          // Navigate back to exams list after error
-          setTimeout(() => {
-            navigate('/exams');
-          }, 3000);
+          toast.error('Failed to load exam data');
         }
       } else {
         setInitialDataLoaded(true);
@@ -269,13 +204,9 @@ const CreateExam = () => {
     if (formData.course_id && courses.length > 0) {
       const fetchCourseContent = async () => {
         try {
-          console.log('Fetching content for course ID:', formData.course_id);
-
           const response = await axios.get(`${API_BASE_URL}/api/courses/${formData.course_id}/content`, {
             headers: getAuthHeader()
           });
-
-          console.log('Course content response:', response.data);
 
           // Filter for chapter content only
           const courseChapters = response.data
@@ -287,19 +218,10 @@ const CreateExam = () => {
               class_name: item.class_name
             }));
 
-          console.log('Filtered course chapters:', courseChapters);
-
           setAvailableChapters(courseChapters);
-
-          // If no chapters are available, show a message
-          if (courseChapters.length === 0) {
-            toast.error('No chapters found for this course. Please add chapters to the course first.');
-          }
         } catch (error) {
           console.error('Error fetching course content:', error);
-          console.error('Error details:', error.response?.data || error.message);
           toast.error('Failed to load course chapters');
-          setAvailableChapters([]);
         }
       };
 
@@ -331,23 +253,6 @@ const CreateExam = () => {
       setFilteredChapters(allChapters);
     }
   }, [selectedSubject, selectedClass, subjects, allChapters]);
-
-  // Fetch topics when needed
-  const fetchTopics = useCallback(async (chapterId) => {
-    try {
-      console.log('Fetching topics for chapter ID:', chapterId);
-      const response = await axios.get(`${API_BASE_URL}/api/curriculum/chapters/${chapterId}/topics`, {
-        headers: getAuthHeader()
-      });
-      console.log('Topics response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching topics:', error);
-      console.error('Error details:', error.response?.data || error.message);
-      // Don't show a toast for this error since it's not critical
-      return [];
-    }
-  }, []);
 
   // Fetch questions based on filters
   useEffect(() => {
@@ -475,129 +380,80 @@ const CreateExam = () => {
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
     console.log('Submitting exam form...');
-    console.log('Form data:', formData);
-    console.log('Selected questions:', selectedQuestions);
-
+    
     // Show immediate feedback
     toast.loading('Validating exam data...', { id: 'exam-submit' });
-
+    
     // Comprehensive validation for all required fields
     const validationErrors = [];
     const cautions = [];
-
-    console.log('Validating form data:', {
-      title: formData.title,
-      course_id: formData.course_id,
-      chapters: formData.chapters,
-      selectedQuestions: selectedQuestions.length,
-      duration_minutes: formData.duration_minutes,
-      start_datetime: formData.start_datetime,
-      end_datetime: formData.end_datetime
-    });
-
+    
     // Critical errors (prevent submission)
-    if (!formData.title || formData.title.trim() === '') {
-      validationErrors.push('Exam title is required');
-      console.error('Validation error: Exam title is required');
-    }
-
-    if (!formData.course_id) {
-      validationErrors.push('Please select a course');
-      console.error('Validation error: Course selection is required');
-    }
-
-    if (!formData.chapters || formData.chapters.length === 0) {
-      validationErrors.push('Select at least one chapter');
-      console.error('Validation error: No chapters selected');
-    }
-
-    if (!selectedQuestions || selectedQuestions.length === 0) {
-      validationErrors.push('Add at least one question');
-      console.error('Validation error: No questions selected');
-    }
-
-    if (!formData.duration_minutes || formData.duration_minutes <= 0) {
-      validationErrors.push('Exam duration must be greater than 0 minutes');
-      console.error('Validation error: Invalid duration');
-    }
-
-    if (formData.start_datetime >= formData.end_datetime) {
-      validationErrors.push('End date must be after start date');
-      console.error('Validation error: Invalid date range');
-    }
-
+    if (!formData.title) validationErrors.push('Exam title is required');
+    if (!formData.course_id) validationErrors.push('Please select a course');
+    if (formData.chapters.length === 0) validationErrors.push('Select at least one chapter');
+    if (selectedQuestions.length === 0) validationErrors.push('Add at least one question');
+    if (formData.duration_minutes <= 0) validationErrors.push('Exam duration must be greater than 0 minutes');
+    if (formData.start_datetime >= formData.end_datetime) validationErrors.push('End date must be after start date');
+    
     // Cautions (warnings but allow submission)
     if (!formData.description) cautions.push('Exam description is empty');
     if (!formData.syllabus) cautions.push('Exam syllabus information is empty');
     if (formData.negative_marking && formData.negative_percentage <= 0) cautions.push('Negative marking is enabled but percentage is set to 0');
     if (selectedQuestions.length < 5) cautions.push('Exam has fewer than 5 questions');
     if (formData.duration_minutes < 10) cautions.push('Exam duration is very short (less than 10 minutes)');
-
+    
     // Display cautions if any
     if (cautions.length > 0 && validationErrors.length === 0) {
       toast.dismiss('exam-submit');
-
-      // Set the cautions list and show the modal
-      setCautionsList(cautions);
-      setShowCautionModal(true);
-      setIsSubmitting(false); // Reset submitting state since we're waiting for modal confirmation
-
-      // Stop here - the modal will handle continuing or canceling
-      return;
+      toast.warning('Some recommended information is missing. See below.', { duration: 5000 });
+      
+      // Create a detailed caution message
+      const cautionMessage = 'CAUTION: The following information is recommended but not required:\n\n- ' + 
+        cautions.join('\n- ') + 
+        '\n\nDo you want to continue anyway?';
+      
+      // Ask user if they want to continue despite cautions
+      const shouldContinue = window.confirm(cautionMessage);
+      
+      if (!shouldContinue) {
+        return; // Stop submission if user cancels
+      }
+      
+      // Otherwise, continue with submission
+      toast.loading('Proceeding with submission...', { id: 'exam-submit' });
     }
-
+    
     // Display validation errors if any
     if (validationErrors.length > 0) {
-      console.log('Validation failed with errors:', validationErrors);
       toast.dismiss('exam-submit');
       toast.error('Cannot create exam. Please fix the following issues:', { duration: 5000 });
-
-      // Show each validation error as a separate toast
-      validationErrors.forEach(error => {
-        console.error('Showing validation error toast:', error);
-        toast.error(error, { duration: 5000 });
-      });
-
-      // Navigate to appropriate tab based on the error type
-      const hasQuestionErrors = validationErrors.some(err =>
-        err.includes('question') || err.toLowerCase().includes('add at least one question')
-      );
-
-      const newTab = hasQuestionErrors ? 'questions' : 'details';
-      console.log(`Switching to tab: ${newTab} due to validation errors`);
-      setActiveTab(newTab);
-
-      // Stop form submission
-      setIsSubmitting(false);
+      validationErrors.forEach(error => toast.error(error, { duration: 5000 }));
+      
+      // Navigate to appropriate tab
+      setActiveTab(validationErrors.some(err => err.includes('question')) ? 'questions' : 'details');
       return;
     }
-
+    
     // Set submitting state
     setIsSubmitting(true);
-
+    
     // Use a timeout to continue the process asynchronously
     setTimeout(() => {
       createExam();
     }, 100);
   };
-
+  
   // Function to perform the actual exam creation
   const createExam = async () => {
-    try {
+    try {  
       console.log('Creating exam with data:', formData);
       console.log('Selected questions:', selectedQuestions);
-
+      
       // We already validated in handleSubmit, so proceed with API call
       console.log('Proceeding with exam creation API call');
       toast.loading('Connecting to server...', { id: 'creating-exam' });
       // Prepare the payload with all required fields
-      // Ensure chapters is an array of numbers
-      const chaptersArray = Array.isArray(formData.chapters)
-        ? formData.chapters.map(id => typeof id === 'string' ? parseInt(id, 10) : id)
-        : [];
-
-      console.log('Processed chapters array:', chaptersArray);
-
       const payload = {
         // Basic exam info
         title: formData.title.trim(),
@@ -607,8 +463,8 @@ const CreateExam = () => {
         syllabus: formData.syllabus || '',
         duration_minutes: parseInt(formData.duration_minutes) || 60,
         total_marks: selectedQuestions.reduce((sum, q) => sum + (q.marks || 1), 0),
-        course_id: parseInt(formData.course_id, 10),
-        chapters: chaptersArray,
+        course_id: formData.course_id,
+        chapters: formData.chapters,
 
         // Question settings
         negative_marking: formData.negative_marking || false,
@@ -616,10 +472,10 @@ const CreateExam = () => {
         shuffle_questions: formData.shuffle_questions || false,
         can_change_answer: formData.can_change_answer !== undefined ? formData.can_change_answer : true,
 
-        // Questions array - ensure IDs are numbers
+        // Questions array
         questions: selectedQuestions.map(q => ({
-          id: typeof q.id === 'string' ? parseInt(q.id, 10) : q.id,
-          marks: parseInt(q.marks || 1, 10)
+          id: q.id,
+          marks: q.marks || 1
         })),
 
         // Basic Settings
@@ -680,22 +536,11 @@ const CreateExam = () => {
       // Log the auth token for debugging
       const authToken = localStorage.getItem('token');
       console.log('Auth token:', authToken ? 'Present' : 'Missing');
-      console.log('Auth token value:', authToken);
       console.log('User role:', user?.role);
 
-      // Check if token is valid
-      if (!authToken) {
-        toast.error('Authentication token is missing. Please log in again.');
-        setIsSubmitting(false);
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
-        return;
-      }
-
-      // Ensure user is admin or teacher
-      if (user?.role !== 'admin' && user?.role !== 'teacher') {
-        toast.error('Only administrators and teachers can create or edit exams');
+      // Ensure user is admin
+      if (user?.role !== 'admin') {
+        toast.error('Only administrators can create or edit exams');
         setIsSubmitting(false);
         return;
       }
@@ -704,8 +549,7 @@ const CreateExam = () => {
         // Prepare headers with authentication token
         const headers = {
           'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Content-Type': 'application/json'
         };
 
         console.log('Request headers:', headers);
@@ -720,23 +564,8 @@ const CreateExam = () => {
           response = await axios.put(`${API_BASE_URL}/api/exams/${id}`, payload, { headers });
           console.log('Update response:', response.data);
           toast.dismiss('processing');
-
-          // Create a more detailed success message for updates
-          const examTitle = formData.title.trim();
-          const questionCount = selectedQuestions.length;
-          const totalMarks = selectedQuestions.reduce((sum, q) => sum + (q.marks || 1), 0);
-
-          // Show a more detailed success notification
-          toast.success(
-            <div className="space-y-1">
-              <div className="font-medium">Exam updated successfully!</div>
-              <div className="text-sm opacity-90">Title: {examTitle}</div>
-              <div className="text-sm opacity-90">Questions: {questionCount}</div>
-              <div className="text-sm opacity-90">Total marks: {totalMarks}</div>
-            </div>,
-            { duration: 5000 }
-          );
-
+          toast.success('Exam updated successfully!');
+          
           // Navigate back to exams list after successful update
           setTimeout(() => {
             navigate('/exams');
@@ -745,129 +574,37 @@ const CreateExam = () => {
           console.log('Sending create exam request with payload:', JSON.stringify(payload, null, 2));
           // Make API call with simplified error handling
           console.log('About to make API call to create exam');
-
-          // Use axios for better error handling
-          try {
-            console.log('Making axios POST request to create exam');
-            const response = await axios.post(
-              `${API_BASE_URL}/api/exams`,
-              payload,
-              { headers }
-            );
-
-            console.log('Got response from server:', response);
-            console.log('Response data:', response.data);
-
-            toast.dismiss('sending');
-
-            // Create a more detailed success message
-            const examTitle = formData.title.trim();
-            const questionCount = selectedQuestions.length;
-            const totalMarks = selectedQuestions.reduce((sum, q) => sum + (q.marks || 1), 0);
-
-            // Show a more detailed success notification
-            toast.success(
-              <div className="space-y-1">
-                <div className="font-medium">Exam created successfully!</div>
-                <div className="text-sm opacity-90">Title: {examTitle}</div>
-                <div className="text-sm opacity-90">Questions: {questionCount}</div>
-                <div className="text-sm opacity-90">Total marks: {totalMarks}</div>
-              </div>,
-              { duration: 5000 }
-            );
-
-            // Navigate to exams list with a query parameter to force refresh
-            setTimeout(() => {
-              console.log('Navigating to exams list with refresh parameter');
-              navigate('/exams?created=true&timestamp=' + Date.now());
-            }, 1000);
-          } catch (error) {
-            console.error('Error creating exam with axios:', error);
-
-            // Log detailed error information
-            if (error.response) {
-              // The request was made and the server responded with a status code
-              // that falls out of the range of 2xx
-              console.error('Error response data:', error.response.data);
-              console.error('Error response status:', error.response.status);
-              console.error('Error response headers:', error.response.headers);
-
-              // Check if the error is related to missing columns
-              if (error.response.data?.details &&
-                  error.response.data.details.includes('column') &&
-                  error.response.data.details.includes('does not exist')) {
-
-                console.log('Database schema error detected. Trying with simplified payload...');
-                toast.dismiss('sending');
-                toast.error('Database schema needs to be updated. Trying with basic settings...');
-
-                // Create a simplified payload without the advanced settings
-                const simplifiedPayload = {
-                  title: formData.title.trim(),
-                  description: formData.description || '',
-                  start_datetime: payload.start_datetime,
-                  end_datetime: payload.end_datetime,
-                  syllabus: formData.syllabus || '',
-                  duration_minutes: parseInt(formData.duration_minutes) || 60,
-                  total_marks: selectedQuestions.reduce((sum, q) => sum + (q.marks || 1), 0),
-                  course_id: parseInt(formData.course_id, 10),
-                  chapters: chaptersArray,
-                  negative_marking: formData.negative_marking || false,
-                  negative_percentage: formData.negative_marking ? (formData.negative_percentage || 0) : 0,
-                  shuffle_questions: formData.shuffle_questions || false,
-                  can_change_answer: formData.can_change_answer !== undefined ? formData.can_change_answer : true,
-                  questions: selectedQuestions.map(q => ({
-                    id: typeof q.id === 'string' ? parseInt(q.id, 10) : q.id,
-                    marks: parseInt(q.marks || 1, 10)
-                  })),
-                  created_by: user?.id
-                };
-
-                // Try again with the simplified payload
-                try {
-                  console.log('Retrying with simplified payload:', simplifiedPayload);
-                  toast.loading('Retrying with basic settings...', { id: 'retry-exam' });
-
-                  const retryResponse = await axios.post(
-                    `${API_BASE_URL}/api/exams`,
-                    simplifiedPayload,
-                    { headers }
-                  );
-
-                  console.log('Retry successful:', retryResponse.data);
-                  toast.dismiss('retry-exam');
-                  toast.success('Exam created successfully with basic settings!');
-
-                  // Navigate to exams list
-                  setTimeout(() => {
-                    navigate('/exams?created=true&timestamp=' + Date.now());
-                  }, 1000);
-
-                  return;
-                } catch (retryError) {
-                  console.error('Retry also failed:', retryError);
-                  toast.dismiss('retry-exam');
-                  toast.error('Failed to create exam even with basic settings. Please contact the administrator.');
-                }
-              } else {
-                // Show the original error message
-                toast.dismiss('sending');
-                toast.error(`Server error: ${error.response.data.message || 'Unknown error'}`);
-              }
-            } else if (error.request) {
-              // The request was made but no response was received
-              console.error('No response received:', error.request);
-              toast.dismiss('sending');
-              toast.error('No response from server. Please check your connection.');
+          
+          // Use a simple fetch call for maximum compatibility
+          fetch(`${API_BASE_URL}/api/exams`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(payload)
+          })
+          .then(response => {
+            console.log('Got response from server, status:', response.status);
+            if (response.ok) {
+              return response.json();
             } else {
-              // Something happened in setting up the request that triggered an Error
-              console.error('Error setting up request:', error.message);
-              toast.dismiss('sending');
-              toast.error(`Request error: ${error.message}`);
+              throw new Error(`Server returned ${response.status}: ${response.statusText}`);
             }
-
+          })
+          .then(data => {
+            console.log('Successfully parsed response:', data);
+            toast.dismiss('sending');
+            toast.success('Exam created successfully!');
+            
+            // Simple alert and navigation
+            alert('Exam created successfully! Click OK to go to exams list.');
+            window.location.href = '/exams';
+          })
+          .catch(error => {
+            console.error('Error during fetch:', error);
+            toast.dismiss('sending');
+            toast.error(`Failed to create exam: ${error.message}`);
+            alert(`Error creating exam: ${error.message}`);
             setIsSubmitting(false);
-          }
+          });
         }
       } catch (apiError) {
         console.error('API Error:', apiError);
@@ -1028,14 +765,13 @@ const CreateExam = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Course <span className="text-red-500">*</span>
+              Course
             </label>
             <select
               name="course_id"
               value={formData.course_id}
               onChange={handleInputChange}
               className="mt-1 block w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors appearance-none"
-              required
             >
               <option value="">Select Course</option>
               {courses.map(course => (
@@ -1044,9 +780,6 @@ const CreateExam = () => {
                 </option>
               ))}
             </select>
-            {!formData.course_id && (
-              <p className="mt-1 text-xs text-amber-600">A course must be selected to create an exam</p>
-            )}
           </div>
 
           <div>
@@ -1140,12 +873,8 @@ const CreateExam = () => {
                     ))}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-6 text-sm text-gray-500 bg-amber-50 border border-amber-200 rounded-md p-4">
-                    <svg className="h-6 w-6 text-amber-500 mb-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    <p className="text-amber-800 font-medium mb-1">No chapters available for this course</p>
-                    <p className="text-amber-700 text-xs text-center">You need to add chapters to this course in the Courses section before you can create an exam.</p>
+                  <div className="flex items-center justify-center py-6 text-sm text-gray-500">
+                    <p>No chapters available for this course.</p>
                   </div>
                 )
               ) : selectedClass ? (
@@ -1913,24 +1642,6 @@ const CreateExam = () => {
   // Render Questions Tab
   const renderQuestionsTab = () => (
     <div className="space-y-8">
-      {/* Warning banner if no questions are selected */}
-      {selectedQuestions.length === 0 && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">No questions selected</h3>
-              <div className="mt-2 text-sm text-red-700">
-                <p>You must select at least one question to create an exam. Use the question search below to find and add questions.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-5 flex items-center gap-2">
           <FiCheckCircle className="text-blue-500" />
@@ -2177,28 +1888,6 @@ const CreateExam = () => {
         </Link>
       </nav>
 
-      {/* Warning Banner */}
-      {(!formData.title || selectedQuestions.length === 0) && (
-        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-amber-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-amber-800">Required fields missing</h3>
-              <div className="mt-2 text-sm text-amber-700">
-                <ul className="list-disc pl-5 space-y-1">
-                  {!formData.title && <li>Exam title is required</li>}
-                  {selectedQuestions.length === 0 && <li>At least one question must be selected (go to the Questions tab)</li>}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4 sm:mb-6">
         <div>
@@ -2220,31 +1909,24 @@ const CreateExam = () => {
             <span>Cancel</span>
           </button>
 
-          <div className="flex flex-col">
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-1 sm:gap-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <FiSave className="h-4 w-4" />
-                  <span>{isEditing ? 'Update Exam' : 'Save Exam'}</span>
-                </>
-              )}
-            </button>
-            {selectedQuestions.length === 0 && (
-              <div className="text-xs text-red-500 mt-1 text-center">
-                Add questions before saving
-              </div>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-1 sm:gap-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <FiSave className="h-4 w-4" />
+                <span>{isEditing ? 'Update Exam' : 'Save Exam'}</span>
+              </>
             )}
-          </div>
+          </button>
         </div>
       </div>
 
@@ -2331,24 +2013,11 @@ const CreateExam = () => {
                   className={`flex items-center gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
                     activeTab === 'questions'
                       ? 'border-b-2 border-blue-500 text-blue-600'
-                      : selectedQuestions.length === 0
-                        ? 'text-red-500 hover:text-red-700 hover:border-red-300 font-bold'
-                        : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  {selectedQuestions.length === 0 ? (
-                    <>
-                      <svg className="h-4 w-4 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                      <span>Questions (Required)</span>
-                    </>
-                  ) : (
-                    <>
-                      <FiCheckCircle className="h-4 w-4" />
-                      <span>Questions ({selectedQuestions.length})</span>
-                    </>
-                  )}
+                  <FiCheckCircle className="h-4 w-4" />
+                  <span>Questions</span>
                 </button>
               </div>
             </div>
@@ -2371,21 +2040,6 @@ const CreateExam = () => {
           </div>
         </div>
       </div>
-
-      {/* Caution Modal */}
-      <CautionModal
-        isOpen={showCautionModal}
-        onClose={() => setShowCautionModal(false)}
-        onConfirm={() => {
-          setShowCautionModal(false);
-          toast.loading('Proceeding with submission...', { id: 'exam-submit' });
-          // Continue with form submission
-          setTimeout(() => {
-            createExam();
-          }, 100);
-        }}
-        cautions={cautionsList}
-      />
     </div>
     </div>
   );
