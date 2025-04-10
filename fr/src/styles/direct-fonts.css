@@ -1,0 +1,49 @@
+/* Direct Bengali Font Implementation */
+
+/* Import the fonts directly */
+@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;700&display=swap');
+
+/* Define font variables */
+:root {
+  --font-bengali: 'Hind Siliguri', system-ui, sans-serif;
+  --font-english: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Apply Bengali font to Bengali text */
+.bangla-text,
+[lang="bn"],
+[data-has-bengali="true"],
+.bengali-content,
+.contains-bengali-text {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Apply English font to English text */
+.english-text,
+[lang="en"] {
+  font-family: var(--font-english) !important;
+}
+
+/* Direct Bengali character selector */
+*:has([\u0980-\u09FF]) {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Force Bengali font for specific elements */
+.question-text:has([\u0980-\u09FF]),
+.option-content:has([\u0980-\u09FF]),
+.question-card .question-text,
+.question-card .option-content {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Ensure math symbols use KaTeX fonts */
+.katex .mord, .katex .mbin, .katex .mrel, .katex .mopen, .katex .mclose, 
+.katex .mpunct, .katex .minner, .katex .mop {
+  font-family: KaTeX_Main, var(--font-english) !important;
+}
+
+/* Ensure fractions and other math elements use KaTeX fonts */
+.katex .mfrac, .katex .msupsub, .katex .mroot, .katex .msqrt, .katex .mtable {
+  font-family: KaTeX_Main, var(--font-english) !important;
+}

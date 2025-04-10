@@ -1,0 +1,142 @@
+/* LaTeX Table Styles */
+
+/* Basic table styling */
+.latex-table-wrapper {
+  margin: 1rem 0;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Bengali table title */
+.latex-table-title {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+/* Specific styling for Bengali text */
+.bangla-text,
+.bengali-content [lang="bn"],
+.question-text:has([lang="bn"]),
+.bengali-content:has([lang="bn"]) {
+  font-family: 'Tiro Bangla', sans-serif !important;
+}
+
+/* Force Bengali text in question cards to use Tiro Bangla */
+.question-text:has(span:matches([\u0980-\u09FF])),
+.option-content:has(span:matches([\u0980-\u09FF])),
+.bengali-content span:matches([\u0980-\u09FF]) {
+  font-family: 'Tiro Bangla', sans-serif !important;
+}
+
+/* Style for English text */
+.english-text {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+/* Container that has Bengali text somewhere - no font applied at container level */
+.contains-bengali-text {
+  /* No font-family here - we'll handle Bengali text with more specific selectors */
+}
+
+/* Remove any font inheritance from parent elements to child elements */
+.bangla-text .english-text {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+.english-text .bangla-text {
+  font-family: 'Tiro Bangla', sans-serif !important;
+}
+
+.latex-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.latex-table th,
+.latex-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.latex-table th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+/* Ensure all text is left-aligned */
+.text-left, .text-left * {
+  text-align: left !important;
+}
+
+/* Ensure options text is left-aligned */
+.option-content, .option-content * {
+  text-align: left !important;
+}
+
+/* Specific class for inline LaTeX display */
+.inline-latex {
+  display: inline !important;
+}
+
+.inline-latex .katex-display {
+  display: inline-block !important;
+  margin: 0 !important;
+}
+
+/* Fix for Bengali text equations */
+.bangla .katex-display {
+  display: inline-block !important;
+  margin: 0 !important;
+  text-align: left !important;
+}
+
+/* KaTeX specific styles */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5em 0;
+}
+
+/* Reset font for all KaTeX elements to ensure proper font application */
+.katex, .katex-display, .katex-html {
+  font-family: KaTeX_Main, 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Ensure KaTeX elements use the correct font based on content */
+.katex .bangla-text,
+.katex-display .bangla-text,
+.katex-html .bangla-text {
+  font-family: 'Tiro Bangla', sans-serif !important;
+}
+
+.katex .english-text,
+.katex-display .english-text,
+.katex-html .english-text {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+/* Ensure math symbols use KaTeX fonts */
+.katex .mord, .katex .mbin, .katex .mrel, .katex .mopen, .katex .mclose, 
+.katex .mpunct, .katex .minner, .katex .mop {
+  font-family: KaTeX_Main, 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+/* Ensure fractions and other math elements use KaTeX fonts */
+.katex .mfrac, .katex .msupsub, .katex .mroot, .katex .msqrt, .katex .mtable {
+  font-family: KaTeX_Main, 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+/* Mixed content handling */
+[data-contains-bengali="true"] {
+  /* This element contains both Bengali and English text */
+  /* We'll handle the font application at the text node level */
+}
+
+/* Ensure proper spacing in mixed content */
+.bangla-text + .english-text,
+.english-text + .bangla-text {
+  margin-left: 0.1em;
+}

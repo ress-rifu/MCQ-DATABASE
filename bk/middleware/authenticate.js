@@ -2,7 +2,11 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 // Secret key for JWT
-const secretKey = process.env.JWT_SECRET || 'your_jwt_secret';
+// Clean up JWT_SECRET by removing any newlines, same as in authMiddleware.js
+const secretKey = (process.env.JWT_SECRET || 'default_secret').replace(/\n/g, '');
+
+// Log the secret key length for debugging
+console.log('authenticate.js: JWT_SECRET length:', secretKey.length);
 
 const authenticateToken = (req, res, next) => {
     // Log the endpoint being accessed

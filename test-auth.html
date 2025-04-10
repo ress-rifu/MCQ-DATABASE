@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWT Authentication Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin-bottom: 10px;
+        }
+        pre {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>JWT Authentication Test</h1>
+    
+    <div class="container">
+        <h2>Current Token</h2>
+        <textarea id="token" placeholder="JWT token will appear here"></textarea>
+        <div>
+            <button onclick="loadToken()">Load Token from localStorage</button>
+            <button onclick="saveToken()">Save Token to localStorage</button>
+            <button onclick="clearToken()">Clear Token</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Test Authentication</h2>
+        <div>
+            <button onclick="testAuth('/api/exams/count')">Test /api/exams/count</button>
+            <button onclick="testAuth('/api/questions/stats')">Test /api/questions/stats</button>
+            <button onclick="testAuth('/api/curriculum/count')">Test /api/curriculum/count</button>
+        </div>
+        <div style="margin-top: 10px;">
+            <input type="text" id="customEndpoint" placeholder="/api/custom/endpoint" style="padding: 8px; width: 250px;">
+            <button onclick="testCustomEndpoint()">Test Custom Endpoint</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Test Auth Server</h2>
+        <button onclick="testAuthServer()">Test Auth Server</button>
+    </div>
+    
+    <div class="container">
+        <h2>Results</h2>
+        <pre id="results">Results will appear here</pre>
+    </div>
+
+    <script>
+        // Load token from localStorage
+        function loadToken() {
+            const token = localStorage.getItem('token');
+            document.getElementById('token').value = token || '';
+            document.getElementById('results').textContent = token 
+                ? 'Token loaded from localStorage' 
+                : 'No token found in localStorage';
+        }
+        
+        // Save token to localStorage
+        function saveToken() {
+            const token = document.getElementById('token').value.trim();
+            if (token) {
+                localStorage.setItem('token', token);
+                document.getElementById('results').textContent = 'Token saved to localStorage';
+            } else {
+                document.getElementById('results').textContent = 'Please enter a token to save';
+            }
+        }
+        
+        // Clear token
+        function clearToken() {
+            localStorage.removeItem('token');
+            document.getElementById('token').value = '';
+            document.getElementById('results').textContent = 'Token cleared from localStorage';
+        }
+        
+        // Test authentication with backend
+        async function testAuth(endpoint) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('results').textContent = 'No token found in localStorage';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:3001${endpoint}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                document.getElementById('results').textContent = 
+                    `Status: ${response.status}\n` +
+                    `Endpoint: ${endpoint}\n\n` +
+                    JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('results').textContent = 
+                    `Error testing ${endpoint}: ${error.message}`;
+            }
+        }
+        
+        // Test custom endpoint
+        function testCustomEndpoint() {
+            const endpoint = document.getElementById('customEndpoint').value;
+            if (!endpoint) {
+                document.getElementById('results').textContent = 'Please enter an endpoint to test';
+                return;
+            }
+            
+            testAuth(endpoint);
+        }
+        
+        // Test auth server
+        async function testAuthServer() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('results').textContent = 'No token found in localStorage';
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:3002/test-auth', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                document.getElementById('results').textContent = 
+                    `Status: ${response.status}\n\n` +
+                    JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('results').textContent = 
+                    `Error testing auth server: ${error.message}`;
+            }
+        }
+        
+        // Load token on page load
+        window.onload = loadToken;
+    </script>
+</body>
+</html>

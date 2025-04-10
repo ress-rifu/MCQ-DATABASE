@@ -47,7 +47,10 @@ router.post('/signup', [
         );
 
         // Create JWT token
-        const token = jwt.sign({ id: newUser.rows[0].id, role: newUser.rows[0].role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        // Clean up JWT_SECRET by removing any newlines
+        const jwtSecret = (process.env.JWT_SECRET || 'default_secret').replace(/\n/g, '');
+        console.log('Signup: JWT_SECRET length:', jwtSecret.length);
+        const token = jwt.sign({ id: newUser.rows[0].id, role: newUser.rows[0].role }, jwtSecret, { expiresIn: '1d' });
 
         // Exclude password before sending the user details in response
         const { password: _, ...userWithoutPassword } = newUser.rows[0];
@@ -100,8 +103,16 @@ router.post('/login', [
         // Create JWT token
         console.log('Creating JWT token');
         // Clean up JWT_SECRET by removing any newlines
-        const jwtSecret = process.env.JWT_SECRET.replace(/\n/g, '');
-        const token = jwt.sign({ id: user.id, role: user.role }, jwtSecret, { expiresIn: '1d' });
+        const jwtSecret = (process.env.JWT_SECRET || 'default_secret').replace(/\n/g, '');
+        console.log('Login: JWT_SECRET length:', jwtSecret.length);
+        
+        // Create token with user ID and role
+        const payload = { id: user.id, role: user.role };
+        console.log('Token payload:', payload);
+        const token = jwt.sign(payload, jwtSecret, { expiresIn: '1d' });
+        
+        // Log token info for debugging (without revealing the full token)
+        console.log('Token generated, first 20 chars:', token.substring(0, 20) + '...');
 
         // Exclude the password before sending the response
         const { password: _, ...userWithoutPassword } = user;

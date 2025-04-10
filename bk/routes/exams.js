@@ -3,6 +3,73 @@ const router = express.Router();
 const pool = require('../db');
 const authMiddleware = require('../middleware/authMiddleware');
 
+// Smart answer matching function
+const findBestMatchingOption = (answer, options) => {
+  console.log('Smart answer matching for answer:', answer);
+  console.log('Available options:', options);
+  
+  if (!answer) return null;
+  
+  // If answer is already A, B, C, or D, return it directly
+  if (['A', 'B', 'C', 'D'].includes(answer.toUpperCase())) {
+    console.log('Answer is already an option letter:', answer.toUpperCase());
+    return answer.toUpperCase();
+  }
+  
+  // Clean the answer text by removing $ signs and whitespace
+  const cleanAnswer = (text) => {
+    if (!text) return '';
+    return text.replace(/\$/g, '').replace(/\s+/g, '').toLowerCase();
+  };
+  
+  const cleanedAnswer = cleanAnswer(answer);
+  console.log('Cleaned answer:', cleanedAnswer);
+  
+  // Check for exact matches first
+  for (const [option, text] of Object.entries(options)) {
+    const cleanedOption = cleanAnswer(text);
+    console.log(`Comparing with option ${option}:`, cleanedOption);
+    
+    if (cleanedAnswer === cleanedOption) {
+      console.log('Found exact match with option:', option);
+      return option.toUpperCase();
+    }
+  }
+  
+  // If no exact match, look for partial matches
+  let bestMatch = null;
+  let bestMatchScore = 0;
+  
+  for (const [option, text] of Object.entries(options)) {
+    const cleanedOption = cleanAnswer(text);
+    
+    // Skip empty options
+    if (!cleanedOption) continue;
+    
+    // Calculate similarity score (simple contains check)
+    if (cleanedOption.includes(cleanedAnswer) || cleanedAnswer.includes(cleanedOption)) {
+      const score = Math.min(cleanedOption.length, cleanedAnswer.length) / 
+                   Math.max(cleanedOption.length, cleanedAnswer.length);
+      
+      console.log(`Partial match with option ${option}, score:`, score);
+      
+      if (score > bestMatchScore) {
+        bestMatchScore = score;
+        bestMatch = option;
+      }
+    }
+  }
+  
+  if (bestMatch && bestMatchScore > 0.5) {
+    console.log('Best matching option:', bestMatch.toUpperCase(), 'with score:', bestMatchScore);
+    return bestMatch.toUpperCase();
+  }
+  
+  // If no good match found, return the original answer
+  console.log('No good match found, returning original answer');
+  return answer;
+};
+
 // Helper function to check if user is admin
 const isAdmin = (user) => {
   return user && user.role === 'admin';
@@ -101,8 +168,17 @@ router.get('/', authMiddleware, async (req, res) => {
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const examId = req.params.id;
+    console.log(`GET /api/exams/${examId} request received`);
+    console.log('User:', req.user ? `ID: ${req.user.id}, Role: ${req.user.role}` : 'Not authenticated');
+
+    // Validate the exam ID is a number
+    if (isNaN(examId)) {
+      console.error(`Invalid exam ID format: ${examId}`);
+      return res.status(400).json({ message: 'Invalid exam ID format' });
+    }
 
     // Get exam details
+    console.log(`Fetching exam details for ID: ${examId}`);
     const examQuery = `
       SELECT e.*,
              c.name as course_name,
@@ -114,51 +190,139 @@ router.get('/:id', authMiddleware, async (req, res) => {
     `;
 
     const examResult = await pool.query(examQuery, [examId]);
+    console.log(`Exam query result rows: ${examResult.rows.length}`);
 
     if (examResult.rows.length === 0) {
+      console.log(`Exam with ID ${examId} not found`);
       return res.status(404).json({ message: 'Exam not found' });
     }
 
     const exam = examResult.rows[0];
+    console.log(`Found exam: ${exam.title}`);
 
     // Get exam chapters
-    console.log('Fetching chapters for exam ID:', examId);
-    const chaptersQuery = `
-      SELECT ch.*, ec.id as exam_chapter_id, s.name as subject_name, c.name as class_name
-      FROM exam_chapters ec
-      JOIN chapters ch ON ec.chapter_id = ch.id
-      JOIN subjects s ON ch.subject_id = s.id
-      JOIN classes c ON s.class_id = c.id
-      WHERE ec.exam_id = $1
-    `;
+    console.log(`Fetching chapters for exam ID: ${examId}`);
+    try {
+      const chaptersQuery = `
+        SELECT ch.*, ec.id as exam_chapter_id, s.name as subject_name, c.name as class_name
+        FROM exam_chapters ec
+        JOIN chapters ch ON ec.chapter_id = ch.id
+        JOIN subjects s ON ch.subject_id = s.id
+        JOIN classes c ON s.class_id = c.id
+        WHERE ec.exam_id = $1
+      `;
 
-    const chaptersResult = await pool.query(chaptersQuery, [examId]);
-    console.log('Found chapters:', chaptersResult.rows.length);
-    console.log('Chapter data:', chaptersResult.rows);
-    exam.chapters = chaptersResult.rows;
+      const chaptersResult = await pool.query(chaptersQuery, [examId]);
+      console.log(`Found ${chaptersResult.rows.length} chapters for exam ID: ${examId}`);
+      exam.chapters = chaptersResult.rows;
+    } catch (chapterError) {
+      console.error('Error fetching exam chapters:', chapterError);
+      // Continue execution but with empty chapters array
+      exam.chapters = [];
+    }
 
     // Get exam questions with full details
-    const questionsQuery = `
-      SELECT q.id, q.ques, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option,
-             q.explanation, q.difficulty_level, q.reference, q.topic,
-             eq.marks, eq.question_order,
-             ch.name as chapter_name, s.name as subject_name, c.name as class_name
-      FROM exam_questions eq
-      JOIN questions q ON eq.question_id = q.id
-      LEFT JOIN chapters ch ON q.chapter_id = ch.id
-      LEFT JOIN subjects s ON ch.subject_id = s.id
-      LEFT JOIN classes c ON s.class_id = c.id
-      WHERE eq.exam_id = $1
-      ORDER BY eq.question_order
-    `;
+    console.log(`Fetching questions for exam ID: ${examId}`);
+    try {
+      // First check if there are any questions in the exam_questions table
+      const checkQuery = `SELECT COUNT(*) FROM exam_questions WHERE exam_id = $1`;
+      const checkResult = await pool.query(checkQuery, [examId]);
+      const questionCount = parseInt(checkResult.rows[0].count);
+      console.log(`Exam ${examId} has ${questionCount} questions in exam_questions table`);
+      
+      if (questionCount === 0) {
+        console.log('No questions found for this exam in the exam_questions table');
+        exam.questions = [];
+        return;
+      }
+      
+      // Get a sample question to check the schema
+      const sampleQuery = `
+        SELECT * FROM questions q 
+        JOIN exam_questions eq ON q.id = eq.question_id 
+        WHERE eq.exam_id = $1 LIMIT 1
+      `;
+      
+      try {
+        const sampleResult = await pool.query(sampleQuery, [examId]);
+        if (sampleResult.rows.length > 0) {
+          console.log('Sample question columns:', Object.keys(sampleResult.rows[0]));
+          console.log('Sample question chapter field:', sampleResult.rows[0].chapter);
+        } else {
+          console.log('No sample question found');
+        }
+      } catch (sampleError) {
+        console.error('Error fetching sample question:', sampleError);
+      }
+      
+      // Use a simpler query that doesn't rely on the chapter join which has type mismatch issues
+      const questionsQuery = `
+        SELECT q.id, q.ques, q.option_a, q.option_b, q.option_c, q.option_d, 
+               q.answer,
+               q.explanation, q.difficulty_level, q.reference, q.topic,
+               q.chapter as chapter_name, q.subject as subject_name, q.classname as class_name,
+               eq.marks, eq.question_order
+        FROM exam_questions eq
+        JOIN questions q ON eq.question_id = q.id
+        WHERE eq.exam_id = $1
+        ORDER BY eq.question_order
+      `;
+      
+      console.log('Executing questions query:', questionsQuery);
+      console.log('With exam ID:', examId);
 
-    const questionsResult = await pool.query(questionsQuery, [examId]);
-    exam.questions = questionsResult.rows;
+      const questionsResult = await pool.query(questionsQuery, [examId]);
+      console.log(`Found ${questionsResult.rows.length} questions for exam ID: ${examId}`);
+      
+      if (questionsResult.rows.length === 0) {
+        console.log('No questions found in the join query. Trying a simpler query...');
+        // Try a simpler query as a fallback
+        const simpleQuery = `
+          SELECT q.id, q.ques, q.option_a, q.option_b, q.option_c, q.option_d, 
+                 q.answer,
+                 q.explanation, q.difficulty_level, q.reference, q.topic,
+                 q.chapter as chapter_name, q.subject as subject_name, q.classname as class_name,
+                 eq.marks, eq.question_order
+          FROM exam_questions eq
+          JOIN questions q ON eq.question_id = q.id
+          WHERE eq.exam_id = $1
+          ORDER BY eq.question_order
+        `;
+        
+        const simpleResult = await pool.query(simpleQuery, [examId]);
+        console.log(`Simple query found ${simpleResult.rows.length} questions`);
+        
+        if (simpleResult.rows.length > 0) {
+          exam.questions = simpleResult.rows;
+          console.log('Using simplified question data without chapter/subject/class info');
+        } else {
+          exam.questions = [];
+        }
+      } else {
+        exam.questions = questionsResult.rows;
+        console.log('First question:', questionsResult.rows[0]);
+      }
+    } catch (questionError) {
+      console.error('Error fetching exam questions:', questionError);
+      // Continue execution but with empty questions array
+      exam.questions = [];
+    }
 
+    console.log(`Successfully prepared exam data for ID: ${examId}`);
     res.json(exam);
   } catch (error) {
-    console.error('Error fetching exam:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error(`Error fetching exam ID ${req.params.id}:`, error);
+    console.error('Error stack:', error.stack);
+    
+    if (error.code) {
+      console.error('PostgreSQL error code:', error.code);
+    }
+    
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message,
+      code: error.code || 'UNKNOWN_ERROR'
+    });
   }
 });
 
@@ -1237,7 +1401,8 @@ router.post('/:id/submit', authMiddleware, async (req, res) => {
     console.log('Calculating score for attempt:', attempt.id);
     const responsesQuery = `
       SELECT er.id, er.question_id, er.selected_option,
-             q.correct_option, eq.marks
+             q.answer as correct_option, eq.marks,
+             q.option_a, q.option_b, q.option_c, q.option_d
       FROM exam_responses er
       JOIN questions q ON er.question_id = q.id
       JOIN exam_questions eq ON er.question_id = eq.question_id AND eq.exam_id = $1
@@ -1252,7 +1417,18 @@ router.post('/:id/submit', authMiddleware, async (req, res) => {
     let totalMarks = 0;
 
     for (const response of responses) {
-      const isCorrect = response.selected_option === response.correct_option;
+      // Use smart answer matching to determine the correct option
+      const options = {
+        'A': response.option_a,
+        'B': response.option_b,
+        'C': response.option_c,
+        'D': response.option_d
+      };
+      
+      const smartCorrectOption = findBestMatchingOption(response.correct_option, options);
+      console.log('Question ID:', response.question_id, 'Original correct_option:', response.correct_option, 'Smart correct_option:', smartCorrectOption);
+      
+      const isCorrect = response.selected_option === smartCorrectOption;
       let marksObtained = 0;
       totalMarks += response.marks;
 
@@ -1483,16 +1659,8 @@ router.post('/:id/verify-access', authMiddleware, async (req, res) => {
   }
 });
 
-// Get total exams count for dashboard
-router.get('/count', authMiddleware, async (req, res) => {
-  try {
-    const result = await pool.query('SELECT COUNT(*) FROM exams');
-    res.json({ count: parseInt(result.rows[0].count) });
-  } catch (error) {
-    console.error('Error counting exams:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
+// Note: There was a duplicate '/count' route here that was removed.
+// The primary implementation is at the top of this file.
 
 // Get exam leaderboard - Available to all users
 router.get('/:id/leaderboard', authMiddleware, async (req, res) => {

@@ -1,0 +1,37 @@
+/* Embedded font definitions */
+
+/* Use system Bengali fonts as primary option */
+:root {
+  --font-bengali: 'Hind Siliguri', 'Bangla', 'Shonar Bangla', 'Vrinda', system-ui, sans-serif;
+  --font-english: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Apply Bengali font to Bengali text */
+.bangla-text,
+[lang="bn"],
+[data-has-bengali="true"],
+.bengali-content,
+.contains-bengali-text {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Apply English font to English text */
+.english-text {
+  font-family: var(--font-english) !important;
+}
+
+/* Direct Bengali character selector */
+*:has([\u0980-\u09FF]) {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Ensure math symbols use KaTeX fonts */
+.katex .mord, .katex .mbin, .katex .mrel, .katex .mopen, .katex .mclose, 
+.katex .mpunct, .katex .minner, .katex .mop {
+  font-family: KaTeX_Main, var(--font-english) !important;
+}
+
+/* Ensure fractions and other math elements use KaTeX fonts */
+.katex .mfrac, .katex .msupsub, .katex .mroot, .katex .msqrt, .katex .mtable {
+  font-family: KaTeX_Main, var(--font-english) !important;
+}

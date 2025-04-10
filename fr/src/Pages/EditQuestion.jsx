@@ -7,6 +7,62 @@ import LatexEquationModal from '../components/LatexEquationModal';
 import { renderLatexContent } from '../utils/latexRenderer';
 import { extractFirstImageFromHtml } from '../utils/imageUtils';
 
+// Smart answer matching function to determine the correct option
+const findBestMatchingOption = (answer, options) => {
+  if (!answer) return null;
+  
+  // If answer is already A, B, C, or D, return it directly
+  if (['A', 'B', 'C', 'D'].includes(answer?.toUpperCase())) {
+    return answer.toUpperCase();
+  }
+  
+  // Clean the answer text by removing $ signs and whitespace
+  const cleanAnswer = (text) => {
+    if (!text) return '';
+    return text.replace(/\$/g, '').replace(/\s+/g, '').toLowerCase();
+  };
+  
+  const cleanedAnswer = cleanAnswer(answer);
+  
+  // Check for exact matches first
+  for (const [option, text] of Object.entries(options)) {
+    const cleanedOption = cleanAnswer(text);
+    
+    if (cleanedAnswer === cleanedOption) {
+      return option.toUpperCase();
+    }
+  }
+  
+  // If no exact match, look for partial matches
+  let bestMatch = null;
+  let bestMatchScore = 0;
+  
+  for (const [option, text] of Object.entries(options)) {
+    const cleanedOption = cleanAnswer(text);
+    
+    // Skip empty options
+    if (!cleanedOption) continue;
+    
+    // Calculate similarity score (simple contains check)
+    if (cleanedOption.includes(cleanedAnswer) || cleanedAnswer.includes(cleanedOption)) {
+      const score = Math.min(cleanedOption.length, cleanedAnswer.length) / 
+                   Math.max(cleanedOption.length, cleanedAnswer.length);
+      
+      if (score > bestMatchScore) {
+        bestMatchScore = score;
+        bestMatch = option;
+      }
+    }
+  }
+  
+  if (bestMatch && bestMatchScore > 0.5) {
+    return bestMatch.toUpperCase();
+  }
+  
+  // If no good match found, return the original answer
+  return answer;
+};
+
 const EditQuestion = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -105,18 +161,39 @@ const EditQuestion = () => {
       return;
     }
     
+    // Apply smart answer matching if needed
+    const questionToSave = {...question};
+    
+    // If the answer is not a simple option letter, try to match it to the best option
+    if (questionToSave.answer && !['A', 'B', 'C', 'D'].includes(questionToSave.answer.toUpperCase())) {
+      const options = {
+        'A': questionToSave.option_a || '',
+        'B': questionToSave.option_b || '',
+        'C': questionToSave.option_c || '',
+        'D': questionToSave.option_d || ''
+      };
+      
+      const smartAnswer = findBestMatchingOption(questionToSave.answer, options);
+      console.log('Smart answer matching:', {
+        original: questionToSave.answer,
+        matched: smartAnswer
+      });
+      
+      questionToSave.answer = smartAnswer;
+    }
+    
     setSaving(true);
     try {
       let response;
       
       if (questionId) {
         // Update existing question
-        response = await axios.put(`${API_BASE_URL}/api/questions/${questionId}`, question, {
+        response = await axios.put(`${API_BASE_URL}/api/questions/${questionId}`, questionToSave, {
           headers: getAuthHeader()
         });
       } else {
         // Create new question
-        response = await axios.post(`${API_BASE_URL}/api/questions`, question, {
+        response = await axios.post(`${API_BASE_URL}/api/questions`, questionToSave, {
           headers: getAuthHeader()
         });
       }

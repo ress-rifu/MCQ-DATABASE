@@ -1,0 +1,47 @@
+/* Bengali Font Definitions */
+
+/* Hind Siliguri - A widely available Bengali font */
+@font-face {
+  font-family: 'Hind Siliguri';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('https://fonts.googleapis.com/css2?family=Hind+Siliguri&display=swap');
+}
+
+@font-face {
+  font-family: 'Hind Siliguri';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@700&display=swap');
+}
+
+/* Fallback Bengali system fonts */
+@font-face {
+  font-family: 'Bengali System';
+  src: local('Noto Sans Bengali'), 
+       local('SolaimanLipi'),
+       local('Kalpurush'),
+       local('Shonar Bangla'),
+       local('Vrinda'),
+       local('Bangla');
+  unicode-range: U+0980-09FF; /* Bengali Unicode range */
+}
+
+/* Inter font for English text */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('https://fonts.googleapis.com/css2?family=Inter:wght@700&display=swap');
+}

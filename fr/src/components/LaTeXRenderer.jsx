@@ -1,8 +1,118 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { processContent, transformLongtableToHTML, containsComplexTable } from '../utils/latexRenderer';
+import { processContent, transformLongtableToHTML, containsComplexTable, transformSpecialLongtableFormat } from '../utils/latexRenderer';
 import TableSpecificRenderer from './TableSpecificRenderer';
 import katex from 'katex';
 import ReactDOM from 'react-dom/client';
+import '../styles/latexTable.css';
+
+// Function to detect Bengali text in content
+const hasBengaliText = (text) => {
+  if (!text) return false;
+  // Bengali Unicode range: \u0980-\u09FF
+  const bengaliRegex = /[\u0980-\u09FF]/;
+  return bengaliRegex.test(text);
+};
+
+// Apply Bengali font ONLY to Bengali text within an element
+const applyBengaliFont = (element) => {
+  if (!element) return;
+  
+  const processTextNode = (textNode) => {
+    const text = textNode.textContent;
+    if (!text || text.trim() === '') return textNode;
+    
+    // If no Bengali text, leave it as is
+    if (!hasBengaliText(text)) return textNode;
+    
+    // Split text into Bengali and non-Bengali segments
+    const segments = [];
+    let currentSegment = '';
+    let currentIsBengali = false;
+    
+    // Process each character
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const isBengaliChar = /[\u0980-\u09FF]/.test(char);
+      
+      if (i === 0) {
+        currentIsBengali = isBengaliChar;
+        currentSegment = char;
+      } else if (isBengaliChar === currentIsBengali) {
+        // Continue current segment
+        currentSegment += char;
+      } else {
+        // Switch segments
+        segments.push({ text: currentSegment, isBengali: currentIsBengali });
+        currentSegment = char;
+        currentIsBengali = isBengaliChar;
+      }
+    }
+    
+    // Add the last segment
+    if (currentSegment) {
+      segments.push({ text: currentSegment, isBengali: currentIsBengali });
+    }
+    
+    // If only one segment, optimize
+    if (segments.length === 1) {
+      if (segments[0].isBengali) {
+        const span = document.createElement('span');
+        span.className = 'bangla-text';
+        span.textContent = text;
+        return span;
+      }
+      return textNode;
+    }
+    
+    // Create a document fragment to hold all segments
+    const fragment = document.createDocumentFragment();
+    
+    // Add each segment with appropriate font
+    segments.forEach(segment => {
+      if (segment.isBengali) {
+        const span = document.createElement('span');
+        span.className = 'bangla-text';
+        span.textContent = segment.text;
+        fragment.appendChild(span);
+      } else {
+        const span = document.createElement('span');
+        span.className = 'english-text';
+        span.textContent = segment.text;
+        fragment.appendChild(span);
+      }
+    });
+    
+    return fragment;
+  };
+  
+  const processNode = (node) => {
+    if (!node) return;
+    
+    if (node.nodeType === Node.TEXT_NODE) {
+      // Process text node
+      if (hasBengaliText(node.textContent)) {
+        const replacement = processTextNode(node);
+        if (replacement !== node) {
+          node.parentNode.replaceChild(replacement, node);
+        }
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      // Skip processing if this is already a font-specific element
+      if (node.classList && (node.classList.contains('bangla-text') || node.classList.contains('english-text'))) {
+        return;
+      }
+      
+      // Process children
+      const childNodes = Array.from(node.childNodes);
+      childNodes.forEach(processNode);
+    }
+  };
+  
+  // Only process if there's Bengali text somewhere in this element
+  if (hasBengaliText(element.textContent || element.innerText)) {
+    processNode(element);
+  }
+};
 
 /**
  * Component to render LaTeX content including complex environments like tables
@@ -19,6 +129,17 @@ const LaTeXRenderer = ({ content, className = '' }) => {
     // Unicode range for Bengali: \u0980-\u09FF
     const bengaliPattern = /[\u0980-\u09FF]/;
     return bengaliPattern.test(text);
+  };
+  
+  // Apply Tiro Bangla font ONLY to Bengali text within an element
+  const applyTiroBanglaToElement = (element) => {
+    if (!element) return;
+    
+    // Only add the class if the element itself contains Bengali text
+    if (hasBengaliText(element.textContent)) {
+      // We'll add a special data attribute to mark this element for processing
+      element.setAttribute('data-contains-bengali', 'true');
+    }
   };
 
   // Helper function to clean longtable content for better rendering
@@ -62,13 +183,25 @@ const LaTeXRenderer = ({ content, className = '' }) => {
     if (containerRef.current) {
       try {
         // Ensure content is a string
-        const safeContent = typeof content === 'string' ? content : String(content || '');
+        let safeContent = typeof content === 'string' ? content : String(content || '');
+        
+        // Special handling for the specific Bengali table format
+        if (safeContent.includes('\\begin{longtable}') && 
+            (safeContent.includes('aggedright\\arraybackslash') || 
+             safeContent.includes('centering\\arraybackslash')) && 
+            safeContent.includes('abcolsep') && 
+            safeContent.includes('eal{')) {
+          console.log('Detected special Bengali table format');
+        }
         
         // Skip processing if the content is empty
         if (!safeContent.trim()) {
           containerRef.current.innerHTML = '';
           return;
         }
+        
+        // Debug the content being rendered
+        console.log('LaTeX content to render:', safeContent);
 
         // Check if content has Bengali text
         const isBengali = hasBengaliText(safeContent);
@@ -170,14 +303,59 @@ const LaTeXRenderer = ({ content, className = '' }) => {
         // Special handling for specific LaTeX environments
         const containsLongtable = safeContent.includes('\\begin{longtable}');
         const containsTabular = safeContent.includes('\\begin{tabular}');
-        const containsLaTeX = 
+        // Initialize containsLaTeX as a let so we can modify it if needed
+        let containsLaTeX = 
           safeContent.includes('$') || 
           safeContent.includes('\\begin') || 
           safeContent.includes('\\end') ||
           safeContent.includes('\\frac') ||
           safeContent.includes('\\text');
         
+        // Check for the specific format with aggedright\arraybackslash
+        const isSpecialFormat = 
+          safeContent.includes('aggedright\\arraybackslash') && 
+          safeContent.includes('abcolsep') && 
+          safeContent.includes('eal{');
+        
+        // If it contains a longtable, use special rendering
+        if (containsLongtable) {
+          // Special handling for the specific format
+          if (isSpecialFormat) {
+            try {
+              console.log("Using special format handler for longtable");
+              const html = transformSpecialLongtableFormat(safeContent);
+              containerRef.current.innerHTML = html;
+              setHasLongtable(true);
+              return;
+            } catch (specialFormatError) {
+              console.error('Error rendering special format longtable:', specialFormatError);
+              // Fall through to standard longtable handling
+            }
+          }
+        }
+        
         setHasLongtable(containsLongtable || containsTabular);
+        
+        // If it doesn't explicitly look like LaTeX but contains math-like patterns, wrap it in $ delimiters
+        if (!containsLaTeX && (
+          safeContent.includes('\\frac') || 
+          safeContent.includes('_') || 
+          safeContent.includes('^') ||
+          safeContent.includes('\\eq') ||
+          safeContent.includes('\\neq') ||
+          safeContent.includes('\\leq') ||
+          safeContent.includes('\\geq') ||
+          safeContent.match(/[a-z]_[0-9]/) ||
+          safeContent.match(/\{[^}]*\}/) ||
+          safeContent.includes('\\ext')
+        )) {
+          // Wrap in $ delimiters if not already wrapped
+          if (!safeContent.startsWith('$')) {
+            safeContent = `$${safeContent}$`;
+            // Update containsLaTeX flag since we've added LaTeX delimiters
+            containsLaTeX = true;
+          }
+        }
         
         // If it's not LaTeX content, render as plain text
         if (!containsLaTeX) {
@@ -186,8 +364,55 @@ const LaTeXRenderer = ({ content, className = '' }) => {
         }
         
         // Process and insert the rendered content
-        const processedContent = processContent(safeContent);
-        containerRef.current.innerHTML = processedContent;
+        try {
+          // First try to render with KaTeX directly if it's a simple expression
+          if (safeContent.startsWith('$') && safeContent.endsWith('$') && !safeContent.includes('\\begin{') && !safeContent.includes('\\end{')) {
+            const mathContent = safeContent.substring(1, safeContent.length - 1);
+            try {
+              const html = katex.renderToString(mathContent, {
+                throwOnError: false,
+                displayMode: false, // Changed to false to render inline instead of block
+                output: 'html',
+                trust: true
+              });
+              containerRef.current.innerHTML = html;
+              return;
+            } catch (katexError) {
+              console.warn('KaTeX direct rendering failed, falling back to processContent', katexError);
+              // Fall through to processContent
+            }
+          }
+          
+          const processedContent = processContent(safeContent);
+          containerRef.current.innerHTML = processedContent;
+        } catch (renderError) {
+          console.error('Error in primary rendering path:', renderError);
+          
+          // Last resort fallback - try to render with KaTeX with additional preprocessing
+          try {
+            let fallbackContent = safeContent;
+            // If not wrapped in $ delimiters, wrap it
+            if (!fallbackContent.startsWith('$')) {
+              fallbackContent = `$${fallbackContent}$`;
+            }
+            
+            // Replace problematic LaTeX constructs
+            fallbackContent = fallbackContent
+              .replace(/\\eq/g, '=')
+              .replace(/\\ext/g, '\\text');
+              
+            const html = katex.renderToString(fallbackContent.substring(1, fallbackContent.length - 1), {
+              throwOnError: false,
+              displayMode: false, // Changed to false to render inline instead of block
+              output: 'html',
+              trust: true
+            });
+            containerRef.current.innerHTML = html;
+          } catch (fallbackError) {
+            console.error('All rendering attempts failed:', fallbackError);
+            containerRef.current.textContent = safeContent; // Last resort: show as plain text
+          }
+        }
         
         // Add specific class for better scrolling on tables
         if (containsLongtable || containsTabular) {
@@ -195,12 +420,32 @@ const LaTeXRenderer = ({ content, className = '' }) => {
         }
 
         // After processing the content, ensure the correct font is applied
-        if (isBengali) {
-          const nonKaTeXElements = containerRef.current.querySelectorAll(':not(.katex)');
-          nonKaTeXElements.forEach(el => {
-            if (hasBengaliText(el.textContent)) {
-              el.classList.add('bangla');
-            }
+        if (containerRef.current) {
+          // Apply our improved font handling to the entire container
+          applyBengaliFont(containerRef.current);
+          
+          // Special handling for KaTeX elements
+          const katexElements = containerRef.current.querySelectorAll('.katex, .katex-display, .katex-html');
+          katexElements.forEach(el => {
+            const spans = el.querySelectorAll('span');
+            spans.forEach(span => {
+              const text = span.textContent || '';
+              // Only add bangla-text class if the span contains Bengali text
+              if (hasBengaliText(text)) {
+                span.classList.add('bangla-text');
+                span.setAttribute('lang', 'bn');
+                // Remove english-text class if it was added
+                span.classList.remove('english-text');
+              } else {
+                // Only add english-text class if the span contains text
+                if (text.trim() !== '') {
+                  span.classList.add('english-text');
+                  span.setAttribute('lang', 'en');
+                  // Remove bangla-text class if it was added
+                  span.classList.remove('bangla-text');
+                }
+              }
+            });
           });
         }
       } catch (error) {
@@ -218,12 +463,20 @@ const LaTeXRenderer = ({ content, className = '' }) => {
     defaultClasses += ' contains-longtable';
   }
   
+  // Add a class to indicate this container has Bengali text somewhere
+  // But we won't apply any font to the whole container
+  if (typeof content === 'string' && hasBengaliText(content)) {
+    defaultClasses += ' contains-bengali-text bengali-content';
+  }
+  
   const combinedClasses = className ? `${defaultClasses} ${className}` : defaultClasses;
 
   return (
     <div 
       ref={containerRef} 
       className={combinedClasses}
+      data-has-bengali={typeof content === 'string' && hasBengaliText(content) ? 'true' : 'false'}
+      lang={typeof content === 'string' && hasBengaliText(content) ? 'bn' : 'en'}
     />
   );
 };

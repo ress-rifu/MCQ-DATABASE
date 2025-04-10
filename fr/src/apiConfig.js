@@ -1,6 +1,6 @@
 // API Configuration File
 // Read API URL from environment variables, with fallback to localhost
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const API_URL = API_BASE_URL; // Adding API_URL as an alias for API_BASE_URL
 
 // Log the API URL in development mode

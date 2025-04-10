@@ -3,10 +3,26 @@
   themes: light --default, forest --prefersdark;
 }
 
-/* Set system default fonts */
+/* Set Inter as the default font for English text */
 html, body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
+}
+
+/* Font settings for Bengali and English text */
+:root {
+  --font-english: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-bengali: 'Tiro Bangla', sans-serif;
+}
+
+/* Apply Tiro Bangla ONLY to Bengali text */
+.bangla-text {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Ensure English text uses Inter */
+.english-text {
+  font-family: var(--font-english) !important;
 }
 
 /* Global responsive styles */
@@ -85,7 +101,7 @@ img {
 
 /* Simple table fallback when KaTeX can't render */
 .simple-table-fallback {
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* Direct LaTeX table rendering - the most reliable fallback method */
@@ -94,7 +110,7 @@ img {
   border-collapse: collapse;
   margin: 0.5rem 0;
   font-size: 1rem;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .direct-latex-table th {

@@ -1,15 +1,15 @@
 // testApi.js - Script to test API endpoints from the frontend
 import axios from 'axios';
-import { API_BASE_URL } from './apiConfig';
-
-// Mock token for testing
-const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwiaWF0IjoxNjE2MTYyMjIwLCJleHAiOjE2MTYyNDg2MjB9.3NB9qJ6eY7VU3W7HH5sYVHm1RwNJw8QmYiMwxP9jfhQ';
+import { API_BASE_URL, getAuthHeader } from './apiConfig';
 
 // Helper function to make authenticated API calls
 const callApi = async (endpoint) => {
   try {
+    const authHeader = getAuthHeader();
+    console.log('Using auth header:', authHeader);
+    
     const response = await axios.get(`${API_BASE_URL}${endpoint}`, {
-      headers: { Authorization: `Bearer ${mockToken}` }
+      headers: authHeader
     });
     return response.data;
   } catch (error) {

@@ -1,0 +1,74 @@
+/* Local Bengali Font Definitions */
+
+/* Hind Siliguri - Regular */
+@font-face {
+  font-family: 'Hind Siliguri';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/bengali/HindSiliguri-Regular.ttf') format('truetype');
+}
+
+/* Hind Siliguri - Medium */
+@font-face {
+  font-family: 'Hind Siliguri';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../fonts/bengali/HindSiliguri-Medium.ttf') format('truetype');
+}
+
+/* Hind Siliguri - Bold */
+@font-face {
+  font-family: 'Hind Siliguri';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/bengali/HindSiliguri-Bold.ttf') format('truetype');
+}
+
+/* Noto Sans Bengali - Regular (as fallback) */
+@font-face {
+  font-family: 'Noto Sans Bengali';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/bengali/NotoSansBengali-Regular.ttf') format('truetype');
+}
+
+/* Font variables */
+:root {
+  --font-bengali: 'Hind Siliguri', 'Noto Sans Bengali', system-ui, sans-serif;
+  --font-english: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Apply Bengali font to Bengali text */
+.bangla-text,
+[lang="bn"],
+[data-has-bengali="true"],
+.bengali-content,
+.contains-bengali-text {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Apply English font to English text */
+.english-text,
+[lang="en"] {
+  font-family: var(--font-english) !important;
+}
+
+/* Direct Bengali character selector */
+*:has([\u0980-\u09FF]) {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Ensure math symbols use KaTeX fonts */
+.katex .mord, .katex .mbin, .katex .mrel, .katex .mopen, .katex .mclose, 
+.katex .mpunct, .katex .minner, .katex .mop {
+  font-family: KaTeX_Main, var(--font-english) !important;
+}
+
+/* Ensure fractions and other math elements use KaTeX fonts */
+.katex .mfrac, .katex .msupsub, .katex .mroot, .katex .msqrt, .katex .mtable {
+  font-family: KaTeX_Main, var(--font-english) !important;
+}

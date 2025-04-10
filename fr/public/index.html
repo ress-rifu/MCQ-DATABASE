@@ -8,14 +8,41 @@
   <!-- Remove all font preload references -->
   
   <style>
-    /* Use system default fonts */
-    html, body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    /* Direct Bengali font application */
+    .bangla-text,
+    [lang="bn"],
+    *:has([\u0980-\u09FF]),
+    .bengali-content,
+    .contains-bengali-text,
+    .question-text,
+    .option-content,
+    .explanation-content {
+      font-family: 'Hind Siliguri', system-ui, sans-serif !important;
+    }
+    
+    /* Ensure English text uses Inter font */
+    .english-text,
+    [lang="en"] {
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
   </style>
+  <!-- Only keep Inter font from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Bengali fonts will be loaded locally from /fonts/bengali/ directory -->
+  <!-- No need for external Bengali font loading -->
 </head>
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
+  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 </body>
-</html> 
+</html>

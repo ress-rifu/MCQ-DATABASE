@@ -6,6 +6,68 @@ import { toast } from 'react-hot-toast';
 import io from 'socket.io-client';
 import LaTeXRenderer from '../components/LaTeXRenderer';
 
+// Smart answer matching function to determine the correct option
+const findBestMatchingOption = (answer, options) => {
+  console.log('Smart answer matching for answer:', answer);
+  
+  if (!answer) return null;
+  
+  // If answer is already A, B, C, or D, return it directly
+  if (['A', 'B', 'C', 'D'].includes(answer?.toUpperCase())) {
+    return answer.toUpperCase();
+  }
+  
+  // Clean the answer text by removing $ signs and whitespace
+  const cleanAnswer = (text) => {
+    if (!text) return '';
+    return text.replace(/\$/g, '').replace(/\s+/g, '').toLowerCase();
+  };
+  
+  const cleanedAnswer = cleanAnswer(answer);
+  
+  // Check for exact matches first
+  for (const [option, text] of Object.entries(options)) {
+    const cleanedOption = cleanAnswer(text);
+    
+    if (cleanedAnswer === cleanedOption) {
+      console.log('Found exact match with option:', option);
+      return option.toUpperCase();
+    }
+  }
+  
+  // If no exact match, look for partial matches
+  let bestMatch = null;
+  let bestMatchScore = 0;
+  
+  for (const [option, text] of Object.entries(options)) {
+    const cleanedOption = cleanAnswer(text);
+    
+    // Skip empty options
+    if (!cleanedOption) continue;
+    
+    // Calculate similarity score (simple contains check)
+    if (cleanedOption.includes(cleanedAnswer) || cleanedAnswer.includes(cleanedOption)) {
+      const score = Math.min(cleanedOption.length, cleanedAnswer.length) / 
+                   Math.max(cleanedOption.length, cleanedAnswer.length);
+      
+      console.log(`Partial match with option ${option}, score:`, score);
+      
+      if (score > bestMatchScore) {
+        bestMatchScore = score;
+        bestMatch = option;
+      }
+    }
+  }
+  
+  if (bestMatch && bestMatchScore > 0.5) {
+    console.log('Best matching option:', bestMatch.toUpperCase(), 'with score:', bestMatchScore);
+    return bestMatch.toUpperCase();
+  }
+  
+  // If no good match found, return the original answer
+  return answer;
+};
+
 const ExamPortal = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -23,6 +85,7 @@ const ExamPortal = () => {
   const [user, setUser] = useState(null);
   const [socket, setSocket] = useState(null);
   const [connectionError, setConnectionError] = useState(false);
+  const [error, setError] = useState(null);
 
   // Get user data from localStorage
   useEffect(() => {
@@ -33,8 +96,15 @@ const ExamPortal = () => {
     }
   }, []);
 
+  // Fetch exam data when component loads
+  useEffect(() => {
+    fetchExam();
+  }, [id]);
+
   // Connect to socket for real-time updates
   useEffect(() => {
+    // Temporarily disabled socket connection for troubleshooting
+    /*
     if (examStarted && !socket) {
       try {
         const newSocket = io(API_BASE_URL, {
@@ -69,104 +139,87 @@ const ExamPortal = () => {
         setConnectionError(true);
       }
     }
+    */
+    console.log('Socket connection disabled for troubleshooting');
   }, [examStarted, id, socket]);
 
   // Fetch exam details
-  useEffect(() => {
-    const fetchExam = async () => {
-      try {
-        console.log('Fetching exam details for ID:', id);
-        const response = await axios.get(`${API_BASE_URL}/api/exams/${id}`, {
-          headers: getAuthHeader()
-        });
-
-        console.log('Exam data received:', response.data);
-        setExam(response.data);
-
-        // Check if exam is active
-        const now = new Date();
-        const startDate = new Date(response.data.start_datetime);
-        const endDate = new Date(response.data.end_datetime);
-
-        if (now < startDate) {
-          toast.error('This exam has not started yet');
-          navigate('/exams');
-          return;
-        } else if (now > endDate) {
-          toast.error('This exam has ended');
-          navigate('/exams');
-          return;
-        }
-
-        // Check if user has an attempt already
-        console.log('Checking for existing attempt...');
-        const attemptResponse = await axios.get(`${API_BASE_URL}/api/exams/${id}/attempt`, {
-          headers: getAuthHeader()
-        });
-
-        if (attemptResponse.data) {
-          // User has an attempt
-          console.log('Found existing attempt:', attemptResponse.data);
-          const attempt = attemptResponse.data;
-          setAttemptId(attempt.id);
-
-          if (attempt.completed) {
-            console.log('Attempt is already completed');
-            setExamFinished(true);
-            setExamStarted(true);
-          } else {
-            // Resume attempt
-            console.log('Resuming incomplete attempt');
-            setExamStarted(true);
-
-            // Make sure we have questions
-            if (response.data.questions && response.data.questions.length > 0) {
-              console.log('Setting questions:', response.data.questions.length, 'questions found');
-              setQuestions(response.data.questions);
-            } else {
-              console.warn('No questions found in exam data');
-              toast.error('This exam has no questions');
-            }
-
-            // Load responses
-            if (attempt.responses && attempt.responses.length > 0) {
-              console.log('Loading saved responses:', attempt.responses.length, 'responses found');
-              const responsesObj = {};
-              attempt.responses.forEach(resp => {
-                responsesObj[resp.question_id] = resp.selected_option;
-              });
-              setResponses(responsesObj);
-            }
-
-            // Calculate time remaining
-            const endTime = new Date(attempt.start_time);
-            endTime.setMinutes(endTime.getMinutes() + response.data.duration_minutes);
-            const remaining = Math.max(0, endTime - now);
-            setTimeRemaining(Math.floor(remaining / 1000));
-            console.log('Time remaining:', Math.floor(remaining / 1000), 'seconds');
-          }
-        } else {
-          // No attempt yet, show questions but don't start timer
-          console.log('No existing attempt found');
-          if (response.data.questions && response.data.questions.length > 0) {
-            console.log('Setting questions:', response.data.questions.length, 'questions found');
-            setQuestions(response.data.questions);
-          } else {
-            console.warn('No questions found in exam data');
-            toast.error('This exam has no questions');
+  const fetchExam = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log(`Fetching exam with ID: ${id}`);
+      console.log('Auth headers:', getAuthHeader());
+      
+      const response = await axios.get(`${API_BASE_URL}/api/exams/${id}`, {
+        headers: getAuthHeader()
+      });
+      
+      console.log('Exam fetched successfully:', response.data);
+      
+      // Log detailed structure of the exam data to debug
+      console.log('Exam data structure:', {
+        hasQuestionsProperty: 'questions' in response.data,
+        questionsType: response.data.questions ? typeof response.data.questions : 'undefined',
+        isQuestionsArray: Array.isArray(response.data.questions),
+        questionsLength: response.data.questions ? response.data.questions.length : 0,
+        examKeys: Object.keys(response.data)
+      });
+      
+      // If questions exist but are empty, check if they might be in a nested property
+      if (!response.data.questions || response.data.questions.length === 0) {
+        console.log('Checking for questions in other properties...');
+        // Look for questions in other possible locations in the response
+        const possibleQuestionProps = ['examQuestions', 'exam_questions', 'question_list'];
+        for (const prop of possibleQuestionProps) {
+          if (response.data[prop] && Array.isArray(response.data[prop]) && response.data[prop].length > 0) {
+            console.log(`Found questions in '${prop}' property:`, response.data[prop].length);
+            response.data.questions = response.data[prop];
+            break;
           }
         }
-
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching exam:', error);
-        toast.error('Failed to load exam: ' + (error.response?.data?.message || error.message));
-        navigate('/exams');
       }
-    };
-
-    fetchExam();
-  }, [id, navigate]);
+      
+      setExam(response.data);
+      
+      // Set questions from the exam data
+      if (response.data.questions && response.data.questions.length > 0) {
+        setQuestions(response.data.questions);
+        console.log('Questions loaded:', response.data.questions.length);
+        // Log the first question to see its structure
+        console.log('Sample question structure:', response.data.questions[0]);
+      } else {
+        console.warn('No questions found in the exam data');
+        console.error('This will cause the exam to display without any questions');
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching exam:', error);
+      console.error('Error response:', error.response?.data);
+      
+      // Provide a more specific error message based on the error type
+      if (error.response) {
+        // Server responded with an error status
+        if (error.response.status === 404) {
+          setError('Exam not found. Please check the exam ID and try again.');
+        } else if (error.response.status === 500) {
+          setError('Server error occurred. Please try again later or contact support.');
+        } else {
+          setError(`Error: ${error.response.data?.message || error.response.statusText || 'Unknown error'}`);
+        }
+      } else if (error.request) {
+        // No response received from server
+        setError('Could not connect to the server. Please check your internet connection and try again.');
+      } else {
+        // Something else went wrong
+        setError('An unexpected error occurred. Please try again later.');
+      }
+      
+      setLoading(false);
+    }
+  };
 
   // Timer logic
   useEffect(() => {
@@ -190,7 +243,61 @@ const ExamPortal = () => {
   const startExam = async () => {
     try {
       console.log('Starting exam:', id);
-      const response = await axios.post(`${API_BASE_URL}/api/exams/${id}/start`, {}, {
+      console.log('Request payload:', {
+        identifier: user?.email || '', 
+        passcode: exam?.access_passcode || ''
+      });
+      console.log('User object:', user);
+      console.log('Exam object:', exam);
+      
+      // First try a simpler endpoint to verify API connectivity
+      try {
+        const healthCheck = await axios.get(`${API_BASE_URL}/health`);
+        console.log('Health check successful:', healthCheck.data);
+      } catch (healthError) {
+        console.error('Health check failed:', healthError);
+      }
+      
+      // Try API info endpoint which should work without auth
+      try {
+        const apiInfo = await axios.get(`${API_BASE_URL}/api/info`);
+        console.log('API info successful:', apiInfo.data);
+      } catch (infoError) {
+        console.error('API info check failed:', infoError);
+      }
+      
+      // Try the exam start with a different path format
+      // In case the route is directly mounted without the /api prefix
+      try {
+        console.log('Attempting with direct path (no /api prefix)');
+        const response = await axios.post(`${API_BASE_URL}/exams/${id}/start`, {
+          identifier: user?.email || '',
+          passcode: exam?.access_passcode || ''
+        }, {
+          headers: getAuthHeader()
+        });
+        
+        console.log('Exam started successfully:', response.data);
+        setAttemptId(response.data.id);
+        setExamStarted(true);
+        
+        // Start timer
+        setTimeRemaining(exam.duration_minutes * 60);
+        
+        toast.success('Exam started!');
+        return; // Exit early if this worked
+      } catch (error) {
+        console.error('Alternative path attempt failed:', error);
+        console.error('Error response:', error.response?.data);
+        // Continue to try the original path
+      }
+      
+      // Now try the original exam start path
+      console.log('Attempting with standard API path (/api prefix)');
+      const response = await axios.post(`${API_BASE_URL}/api/exams/${id}/start`, {
+        identifier: user?.email || '',
+        passcode: exam?.access_passcode || ''
+      }, {
         headers: getAuthHeader()
       });
 
@@ -204,6 +311,9 @@ const ExamPortal = () => {
       toast.success('Exam started!');
     } catch (error) {
       console.error('Error starting exam:', error);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      console.error('Auth headers used:', getAuthHeader());
       toast.error('Failed to start exam: ' + (error.response?.data?.message || error.message));
     }
   };
@@ -330,123 +440,67 @@ const ExamPortal = () => {
     );
   }
 
+  // Error display
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="max-w-md w-full p-8 bg-white rounded-xl shadow-lg">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-800">Error Loading Exam</h2>
+            <p className="mt-2 text-gray-600">{error}</p>
+          </div>
+          <Link to="/exams" className="block w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-center font-medium rounded-lg transition duration-200">
+            Return to Exams
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   // Exam start screen
   if (!examStarted) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="bg-blue-600 px-6 py-4">
-            <h1 className="text-2xl font-bold text-white">{exam?.title}</h1>
-            <p className="text-blue-100 mt-1">
-              {exam?.class_name && `${exam.class_name} • `}
-              {exam?.subject_name && `${exam.subject_name}`}
-            </p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
+        <div className="max-w-lg w-full bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-semibold text-gray-900">{exam?.title}</h1>
+            <p className="mt-2 text-gray-600">{exam?.description}</p>
           </div>
-
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-500 mb-1">Duration</p>
-                <p className="text-lg font-semibold">{exam?.duration_minutes} minutes</p>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-500 mb-1">Questions</p>
-                <p className="text-lg font-semibold">{questions.length}</p>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-500 mb-1">Total Marks</p>
-                <p className="text-lg font-semibold">{exam?.total_marks}</p>
-              </div>
+          
+          <div className="space-y-4 mb-6">
+            <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+              <span className="text-gray-600">Total Questions</span>
+              <span className="font-medium text-gray-900">{exam?.questions?.length || 0}</span>
             </div>
-
-            {exam?.syllabus && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-2">Syllabus</h3>
-                <div
-                  className="p-4 bg-gray-50 rounded-lg border border-gray-200"
-                >
-                  <LaTeXRenderer content={exam.syllabus || ''} />
-                </div>
-              </div>
-            )}
-
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3">Instructions</h3>
-              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <ul className="space-y-2 text-gray-700">
-                  <li className="flex items-start">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    You will have {exam?.duration_minutes} minutes to complete the exam.
-                  </li>
-                  <li className="flex items-start">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    The exam will be automatically submitted when the time is up.
-                  </li>
-                  <li className="flex items-start">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    You can navigate between questions using the Next and Previous buttons or the question navigator.
-                  </li>
-                  <li className="flex items-start">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    Click the Submit button when you have finished the exam.
-                  </li>
-                  {exam?.shuffle_questions && (
-                    <li className="flex items-start">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                      Questions are randomized for each student.
-                    </li>
-                  )}
-                  {!exam?.can_change_answer && (
-                    <li className="flex items-start">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                      <span className="font-medium">Important:</span> Once an answer is selected, it cannot be changed.
-                    </li>
-                  )}
-                  {exam?.negative_marking && (
-                    <li className="flex items-start">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                      <span className="font-medium">Warning:</span> Incorrect answers will result in a deduction of {exam.negative_percentage}% of the marks.
-                    </li>
-                  )}
-                </ul>
-              </div>
+            <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+              <span className="text-gray-600">Time Limit</span>
+              <span className="font-medium text-gray-900">{formatTime(exam?.duration_minutes * 60)}</span>
             </div>
-
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => navigate('/exams')}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Back to Exams
-              </button>
-
-              <button
-                onClick={startExam}
-                className="px-5 py-2.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center font-medium"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                </svg>
-                Start Exam
-              </button>
+            <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+              <span className="text-gray-600">Passing Score</span>
+              <span className="font-medium text-gray-900">{exam?.passingScore}%</span>
             </div>
           </div>
+          
+          <button
+            onClick={startExam}
+            className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition duration-200 flex items-center justify-center"
+          >
+            Start Exam
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
         </div>
       </div>
     );

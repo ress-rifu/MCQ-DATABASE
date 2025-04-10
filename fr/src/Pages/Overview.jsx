@@ -557,12 +557,16 @@ const Overview = () => {
         return { data: { activities: [] } };
       });
 
-      const examsCountResponse = await axios.get(`${API_BASE_URL}/api/exams/count`).catch(err => {
+      const examsCountResponse = await axios.get(`${API_BASE_URL}/api/exams/count`, {
+        headers: getAuthHeader()
+      }).catch(err => {
         console.error('Error fetching exams count:', err);
         return { data: { count: 0 } };
       });
 
-      const coursesCountResponse = await axios.get(`${API_BASE_URL}/api/courses/count`).catch(err => {
+      const coursesCountResponse = await axios.get(`${API_BASE_URL}/api/courses/count`, {
+        headers: getAuthHeader()
+      }).catch(err => {
         console.error('Error fetching courses count:', err);
         return { data: { count: 0 } };
       });

@@ -27,7 +27,9 @@ import {
   FiSearch,
   FiCalendar,
   FiClock,
-  FiBookOpen
+  FiBookOpen,
+  FiAlertTriangle,
+  FiHelpCircle
 } from 'react-icons/fi';
 
 const CreateExam = () => {
@@ -35,6 +37,10 @@ const CreateExam = () => {
   const navigate = useNavigate();
   const isEditing = !!id;
   const [user, setUser] = useState(null);
+
+  // Modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [modalData, setModalData] = useState({ title: '', message: '', onConfirm: null, cautions: [] });
 
   // Exam form state
   const [formData, setFormData] = useState({
@@ -453,7 +459,6 @@ const CreateExam = () => {
 
     // Comprehensive validation for all required fields
     const validationErrors = [];
-    const cautions = [];
 
     // Critical errors (prevent submission)
     if (!formData.title) validationErrors.push('Exam title is required');
@@ -462,41 +467,6 @@ const CreateExam = () => {
     if (selectedQuestions.length === 0) validationErrors.push('Add at least one question');
     if (formData.duration_minutes <= 0) validationErrors.push('Exam duration must be greater than 0 minutes');
     if (formData.start_datetime >= formData.end_datetime) validationErrors.push('End date must be after start date');
-
-    // Cautions (warnings but allow submission)
-    if (!formData.description) cautions.push('Exam description is empty');
-    if (!formData.syllabus) cautions.push('Exam syllabus information is empty');
-    if (formData.negative_marking && formData.negative_percentage <= 0) cautions.push('Negative marking is enabled but percentage is set to 0');
-    if (selectedQuestions.length < 5) cautions.push('Exam has fewer than 5 questions');
-    if (formData.duration_minutes < 10) cautions.push('Exam duration is very short (less than 10 minutes)');
-
-    // Display cautions if any
-    if (cautions.length > 0 && validationErrors.length === 0) {
-      toast.dismiss('exam-submit');
-      toast('Some recommended information is missing. See below.', {
-        duration: 5000,
-        icon: '⚠️',
-        style: {
-          background: '#FFF9C4',
-          color: '#5D4037'
-        }
-      });
-
-      // Create a detailed caution message
-      const cautionMessage = 'CAUTION: The following information is recommended but not required:\n\n- ' +
-        cautions.join('\n- ') +
-        '\n\nDo you want to continue anyway?';
-
-      // Ask user if they want to continue despite cautions
-      const shouldContinue = window.confirm(cautionMessage);
-
-      if (!shouldContinue) {
-        return; // Stop submission if user cancels
-      }
-
-      // Otherwise, continue with submission
-      toast.loading('Proceeding with submission...', { id: 'exam-submit' });
-    }
 
     // Display validation errors if any
     if (validationErrors.length > 0) {
@@ -526,7 +496,8 @@ const CreateExam = () => {
 
       // We already validated in handleSubmit, so proceed with API call
       console.log('Proceeding with exam creation API call');
-      toast.loading('Connecting to server...', { id: 'creating-exam' });
+      toast.loading('Creating exam...', { id: 'creating-exam' });
+      
       // Prepare the payload with all required fields
       console.log('Preparing exam payload with chapters:', formData.chapters);
 
@@ -606,96 +577,73 @@ const CreateExam = () => {
 
       // Ensure user is admin
       if (user?.role !== 'admin') {
+        toast.dismiss('creating-exam');
         toast.error('Only administrators can create or edit exams');
         setIsSubmitting(false);
         return;
       }
 
-      try {
-        // Prepare headers with authentication token
-        const headers = {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        };
+      // Prepare headers with authentication token
+      const headers = {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      };
 
-        console.log('Request headers:', headers);
-        console.log('Auth token value:', authToken);
-        console.log('Request URL:', isEditing ? `${API_BASE_URL}/api/exams/${id}` : `${API_BASE_URL}/api/exams`);
+      console.log('Request headers:', headers);
+      console.log('Auth token value:', authToken);
+      console.log('Request URL:', isEditing ? `${API_BASE_URL}/api/exams/${id}` : `${API_BASE_URL}/api/exams`);
 
-        // Update toast message
-        toast.dismiss('creating-exam');
-        toast.loading('Sending to server...', { id: 'sending' });
+      // Update toast message
+      toast.dismiss('creating-exam');
+      toast.loading('Saving exam...', { id: 'sending' });
 
-        if (isEditing) {
-          response = await axios.put(`${API_BASE_URL}/api/exams/${id}`, payload, { headers });
-          console.log('Update response:', response.data);
-          toast.dismiss('processing');
-          toast.success('Exam updated successfully!');
+      if (isEditing) {
+        response = await axios.put(`${API_BASE_URL}/api/exams/${id}`, payload, { headers });
+        console.log('Update response:', response.data);
+        toast.dismiss('sending');
+        toast.success('Exam updated successfully!', {
+          duration: 5000,
+          icon: '✅',
+          style: {
+            borderRadius: '10px',
+            background: '#10B981',
+            color: '#fff',
+          },
+        });
 
-          // Navigate back to exams list after successful update
-          setTimeout(() => {
-            navigate('/exams');
-          }, 1000);
-        } else {
-          console.log('Sending create exam request with payload:', JSON.stringify(payload, null, 2));
-          // Make API call with simplified error handling
-          console.log('About to make API call to create exam');
+        // Navigate back to exams list after successful update
+        setTimeout(() => {
+          navigate('/exams');
+        }, 1500);
+      } else {
+        console.log('Sending create exam request with payload:', JSON.stringify(payload, null, 2));
+        response = await axios.post(`${API_BASE_URL}/api/exams`, payload, { headers });
+        console.log('Create response:', response.data);
+        toast.dismiss('sending');
+        toast.success('Exam created successfully!', {
+          duration: 5000,
+          icon: '✅',
+          style: {
+            borderRadius: '10px',
+            background: '#10B981',
+            color: '#fff',
+          },
+        });
 
-          // Use a simple fetch call for maximum compatibility
-          fetch(`${API_BASE_URL}/api/exams`, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(payload)
-          })
-          .then(response => {
-            console.log('Got response from server, status:', response.status);
-            return response.text().then(text => {
-              let data;
-              try {
-                // Try to parse the response as JSON
-                data = JSON.parse(text);
-              } catch (e) {
-                console.error('Error parsing JSON response:', e);
-                console.log('Raw response text:', text);
-                // If parsing fails, create a simple object with the raw text
-                data = { error: 'Invalid JSON response from server', rawText: text };
-              }
-
-              if (response.ok) {
-                return data;
-              } else {
-                // Throw an error with the server's error message if available
-                throw new Error(data.error || data.message || `Server returned ${response.status}: ${response.statusText}`);
-              }
-            });
-          })
-          .then(data => {
-            console.log('Successfully parsed response:', data);
-            toast.dismiss('sending');
-            toast.success('Exam created successfully!');
-
-            // Simple alert and navigation
-            alert('Exam created successfully! Click OK to go to exams list.');
-            window.location.href = '/exams';
-          })
-          .catch(error => {
-            console.error('Error during fetch:', error);
-            toast.dismiss('sending');
-
-            // Display a more user-friendly error message
-            const errorMessage = error.message || 'Unknown error occurred';
-            toast.error(`Failed to create exam: ${errorMessage}`);
-
-            // Show more detailed error in an alert
-            alert(`Error creating exam: ${errorMessage}\n\nPlease check the console for more details.`);
-            setIsSubmitting(false);
-          });
-        }
-      } catch (apiError) {
-        console.error('API Error:', apiError);
-        throw apiError; // Re-throw to be caught by the outer catch block
+        // Navigate back to exams list after successful create
+        setTimeout(() => {
+          navigate('/exams');
+        }, 1500);
       }
     } catch (error) {
+      // Handle network or API errors
+      console.error('API Error:', error);
+      toast.dismiss('sending');
+      toast.dismiss('creating-exam');
+      
+      // Extract error message
+      const errorMessage = error.response?.data?.message || 'Server error. Please try again.';
+      
       console.error('Error saving exam:', error);
 
       if (error.response) {
@@ -775,255 +723,277 @@ const CreateExam = () => {
   // Render Details Tab
   const renderDetailsTab = () => (
     <div className="space-y-8">
+      {/* Required Fields Explanation */}
+      <div className="mb-6 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-md">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <FiHelpCircle className="h-5 w-5 text-yellow-500" />
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-yellow-800">Required Information</h3>
+            <div className="mt-2 text-sm text-yellow-700">
+              <p>The following fields are required to create an exam:</p>
+              <ul className="list-disc pl-5 space-y-1 mt-2">
+                <li><strong>Exam Title</strong> - A descriptive name for your exam</li>
+                <li><strong>Course</strong> - The course this exam belongs to</li>
+                <li><strong>Chapters</strong> - At least one chapter must be selected</li>
+                <li><strong>Duration</strong> - How long students have to complete the exam</li>
+                <li><strong>Date Range</strong> - When the exam will be available to students</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    
+      {/* Basic Info */}
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-5 flex items-center gap-2">
-          <FiBookOpen className="text-blue-500" />
-          <span>Exam Details</span>
+          <FiInfo className="text-blue-500" />
+          <span>Basic Information</span>
         </h3>
-        <div className="space-y-3 sm:space-y-4 md:space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Exam Title
-            </label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleInputChange}
-              className="mt-1 block w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
-              placeholder="Enter exam title"
-              required
-            />
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Description
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              rows="3"
-              className="mt-1 block w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
-              placeholder="Enter exam description (optional)"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-5">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                <FiCalendar className="text-gray-500" size={14} />
-                <span>Start Date/Time</span>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Exam Title <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <DatePicker
-                  selected={formData.start_datetime}
-                  onChange={(date) => handleDateChange(date, 'start_datetime')}
-                  showTimeSelect
-                  timeFormat="HH:mm"
-                  timeIntervals={15}
-                  dateFormat="MMMM d, yyyy h:mm aa"
-                  className="mt-1 block w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
-                />
-              </div>
+              <input
+                type="text"
+                name="title"
+                value={formData.title}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
+                placeholder="e.g. Final Exam, Midterm Exam, etc."
+                required
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                Give your exam a clear, descriptive title
+              </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                <FiClock className="text-gray-500" size={14} />
-                <span>End Date/Time</span>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Description
               </label>
-              <div className="relative">
-                <DatePicker
-                  selected={formData.end_datetime}
-                  onChange={(date) => handleDateChange(date, 'end_datetime')}
-                  showTimeSelect
-                  timeFormat="HH:mm"
-                  timeIntervals={15}
-                  dateFormat="MMMM d, yyyy h:mm aa"
-                  className="mt-1 block w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
-                />
-              </div>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows="3"
+                className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
+                placeholder="Brief description about this exam"
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                Add details about the exam content or purpose (optional)
+              </p>
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Course
-            </label>
-            <select
-              name="course_id"
-              value={formData.course_id}
-              onChange={handleInputChange}
-              className="mt-1 block w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors appearance-none"
-            >
-              <option value="">Select Course</option>
-              {courses.map(course => (
-                <option key={course.id} value={course.id}>
-                  {course.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Syllabus
+              Syllabus/Instructions for Students
             </label>
             <SimpleRichTextEditor
               value={formData.syllabus}
               onChange={handleSyllabusChange}
-              placeholder="Enter exam syllabus (optional)"
+              placeholder="Enter syllabus or additional instructions for students..."
             />
+            <p className="mt-1 text-sm text-gray-500">
+              Provide information about topics covered, exam rules, etc. This will be visible to students.
+            </p>
           </div>
         </div>
       </div>
 
+      {/* Curriculum Selection */}
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-5 flex items-center gap-2">
-          <FiList className="text-blue-500" />
-          <span>Chapter Selection</span>
+          <FiBookOpen className="text-blue-500" />
+          <span>Curriculum Selection</span>
         </h3>
-        <div className="space-y-3 sm:space-y-4 md:space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
+
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Class
+                Course <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="course_id"
+                value={formData.course_id}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
+                required
+              >
+                <option value="">Select a course</option>
+                {courses.map(course => (
+                  <option key={course.id} value={course.id}>
+                    {course.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-sm text-gray-500">
+                Select which course this exam belongs to
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Class (Filter)
               </label>
               <select
                 value={selectedClass}
                 onChange={handleClassChange}
-                className="mt-1 block w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors appearance-none"
+                className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
               >
-                <option value="">Select Class</option>
+                <option value="">All Classes</option>
                 {classes.map(cls => (
-                  <option key={cls.id} value={cls.id}>
-                    {cls.name}
-                  </option>
+                  <option key={cls.id} value={cls.id}>{cls.name}</option>
                 ))}
               </select>
+              <p className="mt-1 text-sm text-gray-500">
+                Optional: Filter chapters by class
+              </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Subject
+                Subject (Filter)
               </label>
               <select
                 value={selectedSubject}
                 onChange={handleSubjectChange}
-                className="mt-1 block w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors appearance-none"
+                className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
                 disabled={!selectedClass}
               >
-                <option value="">Select Subject</option>
+                <option value="">All Subjects</option>
                 {filteredSubjects.map(subject => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name}
-                  </option>
+                  <option key={subject.id} value={subject.id}>{subject.name}</option>
                 ))}
               </select>
+              <p className="mt-1 text-sm text-gray-500">
+                Optional: Filter chapters by subject
+              </p>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center justify-between">
-              <span>Chapters</span>
-              <span className="text-xs text-blue-600 font-medium">{formData.chapters.length} selected</span>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Chapters <span className="text-red-500">*</span>
             </label>
-            <div className="mt-1 p-3 sm:p-4 border border-gray-200 rounded-lg max-h-60 overflow-y-auto bg-white">
-              {formData.course_id ? (
-                availableChapters.length > 0 ? (
-                  <div className="space-y-3">
-                    {availableChapters.map(chapter => {
-                      // Ensure chapter ID is an integer
-                      const chapterId = typeof chapter.id === 'string' ? parseInt(chapter.id) : chapter.id;
-                      // Check if this chapter is selected
-                      const isSelected = formData.chapters.includes(chapterId);
-
-                      return (
-                        <div key={chapterId} className="flex items-center hover:bg-gray-50 p-2 rounded-md transition-colors">
-                          <input
-                            type="checkbox"
-                            id={`chapter-${chapterId}`}
-                            checked={isSelected}
-                            onChange={(e) => {
-                              const isChecked = e.target.checked;
-                              console.log('Chapter checkbox changed:', chapterId, isChecked);
-                              console.log('Current chapters:', formData.chapters);
-                              setFormData(prev => {
-                                const newChapters = isChecked
-                                  ? [...prev.chapters, chapterId]
-                                  : prev.chapters.filter(id => id !== chapterId);
-                                console.log('New chapters array:', newChapters);
-                                return {
-                                  ...prev,
-                                  chapters: newChapters
-                                };
-                              });
-                            }}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                          <label htmlFor={`chapter-${chapterId}`} className="ml-2 block text-sm text-gray-700 cursor-pointer flex-1">
-                            {chapter.name} <span className="text-gray-500 text-xs">({chapter.subject_name}, {chapter.class_name})</span>
-                          </label>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center py-6 text-sm text-gray-500">
-                    <p>No chapters available for this course.</p>
-                  </div>
-                )
-              ) : selectedClass ? (
-                filteredChapters.length > 0 ? (
-                  <div className="space-y-3">
-                    {filteredChapters.map(chapter => {
-                      // Ensure chapter ID is an integer
-                      const chapterId = typeof chapter.id === 'string' ? parseInt(chapter.id) : chapter.id;
-                      // Check if this chapter is selected
-                      const isSelected = formData.chapters.includes(chapterId);
-
-                      return (
-                        <div key={chapterId} className="flex items-center hover:bg-gray-50 p-2 rounded-md transition-colors">
-                          <input
-                            type="checkbox"
-                            id={`chapter-${chapterId}`}
-                            checked={isSelected}
-                            onChange={(e) => {
-                              const isChecked = e.target.checked;
-                              console.log('Chapter checkbox changed:', chapterId, isChecked);
-                              console.log('Current chapters:', formData.chapters);
-                              setFormData(prev => {
-                                const newChapters = isChecked
-                                  ? [...prev.chapters, chapterId]
-                                  : prev.chapters.filter(id => id !== chapterId);
-                                console.log('New chapters array:', newChapters);
-                                return {
-                                  ...prev,
-                                  chapters: newChapters
-                                };
-                              });
-                            }}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                          <label htmlFor={`chapter-${chapterId}`} className="ml-2 block text-sm text-gray-700 cursor-pointer flex-1">
-                            {chapter.name}
-                          </label>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center py-6 text-sm text-gray-500">
-                    <p>Please select a subject to view chapters.</p>
-                  </div>
-                )
-              ) : (
-                <div className="flex items-center justify-center py-6 text-sm text-gray-500">
-                  <p>Please select a class or course to view chapters.</p>
+            
+            {availableChapters.length > 0 ? (
+              <div className="border border-gray-200 rounded-lg max-h-64 overflow-y-auto p-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                  {availableChapters.map(chapter => (
+                    <div key={chapter.id} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`chapter-${chapter.id}`}
+                        checked={formData.chapters.includes(chapter.id)}
+                        onChange={() => {
+                          const updatedChapters = [...formData.chapters];
+                          if (updatedChapters.includes(chapter.id)) {
+                            // Remove
+                            const index = updatedChapters.indexOf(chapter.id);
+                            updatedChapters.splice(index, 1);
+                          } else {
+                            // Add
+                            updatedChapters.push(chapter.id);
+                          }
+                          setFormData({ ...formData, chapters: updatedChapters });
+                        }}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor={`chapter-${chapter.id}`} className="ml-2 block text-sm text-gray-900">
+                        {chapter.name} <span className="text-gray-500 text-xs">({chapter.subject_name})</span>
+                      </label>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
+            ) : (
+              <div className="bg-gray-50 p-4 rounded-lg text-center">
+                <p className="text-gray-500 text-sm">
+                  {formData.course_id
+                    ? "No chapters available. Please select different filters or add chapters to this course."
+                    : "Please select a course to view available chapters."}
+                </p>
+              </div>
+            )}
+            <p className="mt-1 text-sm text-gray-500">
+              Select the chapters covered in this exam
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Exam Timing */}
+      <div>
+        <h3 className="text-lg font-medium text-gray-900 mb-5 flex items-center gap-2">
+          <FiClock className="text-blue-500" />
+          <span>Exam Timing</span>
+        </h3>
+
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Duration (Minutes) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                name="duration_minutes"
+                value={formData.duration_minutes}
+                onChange={handleInputChange}
+                min="1"
+                className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
+                required
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                How long students have to complete the exam
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Start Date & Time <span className="text-red-500">*</span>
+              </label>
+              <DatePicker
+                selected={formData.start_datetime}
+                onChange={(date) => handleDateChange(date, 'start_datetime')}
+                showTimeSelect
+                timeFormat="HH:mm"
+                timeIntervals={15}
+                timeCaption="time"
+                dateFormat="MMMM d, yyyy h:mm aa"
+                className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                When the exam becomes available to students
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                End Date & Time <span className="text-red-500">*</span>
+              </label>
+              <DatePicker
+                selected={formData.end_datetime}
+                onChange={(date) => handleDateChange(date, 'end_datetime')}
+                showTimeSelect
+                timeFormat="HH:mm"
+                timeIntervals={15}
+                timeCaption="time"
+                dateFormat="MMMM d, yyyy h:mm aa"
+                className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                When the exam is no longer available to students
+              </p>
             </div>
           </div>
         </div>
@@ -1064,123 +1034,183 @@ const CreateExam = () => {
   // Render Question Settings Tab
   const renderQuestionSettingsTab = () => (
     <div className="space-y-8">
+      {/* Settings Explanation */}
+      <div className="mb-6 p-3 bg-blue-50 border-l-4 border-blue-500 rounded-md">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <FiInfo className="h-5 w-5 text-blue-500" />
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-blue-800">Question Settings Guide</h3>
+            <div className="mt-2 text-sm text-blue-700">
+              <p>These settings determine how questions are presented and scored:</p>
+              <ul className="list-disc pl-5 space-y-1 mt-2">
+                <li><strong>Negative Marking</strong> - Deduct points for incorrect answers</li>
+                <li><strong>Question Shuffling</strong> - Randomize question order for each student</li>
+                <li><strong>Answer Changes</strong> - Allow or restrict students from changing their answers</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-5 flex items-center gap-2">
-          <FiList className="text-blue-500" />
+          <FiSettings className="text-blue-500" />
           <span>Question Settings</span>
         </h3>
 
         <div className="space-y-6">
-          <div className="bg-white p-5 rounded-lg border border-gray-200">
-            <label className="block text-sm font-medium text-gray-700 mb-3">Pagination</label>
-
-            <div className="space-y-3">
-              <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
-                <input
-                  type="radio"
-                  id="pagination_all"
-                  name="pagination_type"
-                  value="all"
-                  checked={formData.pagination_type === 'all'}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                />
-                <label htmlFor="pagination_all" className="ml-2 block text-sm text-gray-700 cursor-pointer">
-                  Show all questions on one page
-                </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="flex items-start">
+                <div className="flex items-center h-5">
+                  <input
+                    id="negative_marking"
+                    name="negative_marking"
+                    type="checkbox"
+                    checked={formData.negative_marking}
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        negative_marking: e.target.checked
+                      });
+                    }}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                </div>
+                <div className="ml-3">
+                  <label htmlFor="negative_marking" className="font-medium text-gray-700">
+                    Enable Negative Marking
+                  </label>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Deduct points for incorrect answers to discourage guessing
+                  </p>
+                </div>
               </div>
 
-              <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
-                <input
-                  type="radio"
-                  id="pagination_one"
-                  name="pagination_type"
-                  value="one_per_page"
-                  checked={formData.pagination_type === 'one_per_page'}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                />
-                <label htmlFor="pagination_one" className="ml-2 block text-sm text-gray-700 cursor-pointer">
-                  Show one question per page
-                </label>
+              {formData.negative_marking && (
+                <div className="mt-4 pl-7">
+                  <label htmlFor="negative_percentage" className="block text-sm font-medium text-gray-700 mb-1">
+                    Negative Marking Percentage
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      type="number"
+                      id="negative_percentage"
+                      name="negative_percentage"
+                      value={formData.negative_percentage}
+                      onChange={handleInputChange}
+                      min="0"
+                      max="100"
+                      className="block w-20 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    />
+                    <span className="ml-2 text-sm text-gray-500">%</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Percentage of marks to deduct for wrong answers (e.g., 25%)
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="flex items-start">
+                <div className="flex items-center h-5">
+                  <input
+                    id="shuffle_questions"
+                    name="shuffle_questions"
+                    type="checkbox"
+                    checked={formData.shuffle_questions}
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        shuffle_questions: e.target.checked
+                      });
+                    }}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                </div>
+                <div className="ml-3">
+                  <label htmlFor="shuffle_questions" className="font-medium text-gray-700">
+                    Shuffle Questions
+                  </label>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Present questions in random order to each student
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="space-y-3 bg-white p-5 rounded-lg border border-gray-200">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Question Behavior</h4>
-
-            <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
-              <input
-                type="checkbox"
-                id="shuffle_questions"
-                name="shuffle_questions"
-                checked={formData.shuffle_questions}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="shuffle_questions" className="ml-2 block text-sm text-gray-700 cursor-pointer">
-                Randomize the order of questions during the test
-              </label>
-            </div>
-
-            <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
-              <input
-                type="checkbox"
-                id="allow_blank_answers"
-                name="allow_blank_answers"
-                checked={formData.allow_blank_answers}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="allow_blank_answers" className="ml-2 block text-sm text-gray-700 cursor-pointer">
-                Allow students to submit blank/empty answers
-              </label>
-            </div>
-
-            <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
-              <input
-                type="checkbox"
-                id="negative_marking"
-                name="negative_marking"
-                checked={formData.negative_marking}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="negative_marking" className="ml-2 block text-sm text-gray-700 cursor-pointer">
-                Penalize incorrect answers (negative marking)
-              </label>
-            </div>
-
-            {formData.negative_marking && (
-              <div className="ml-1 sm:ml-2 md:ml-6 mt-2 p-2 sm:p-3 bg-gray-50 rounded-md border border-gray-200">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Negative Percentage (%)
-                </label>
-                <input
-                  type="number"
-                  name="negative_percentage"
-                  value={formData.negative_percentage}
-                  onChange={handleInputChange}
-                  min="0"
-                  max="100"
-                  className="block w-full sm:w-1/4 px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 sm:text-sm transition-colors"
-                />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="flex items-start">
+                <div className="flex items-center h-5">
+                  <input
+                    id="can_change_answer"
+                    name="can_change_answer"
+                    type="checkbox"
+                    checked={formData.can_change_answer}
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        can_change_answer: e.target.checked
+                      });
+                    }}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                </div>
+                <div className="ml-3">
+                  <label htmlFor="can_change_answer" className="font-medium text-gray-700">
+                    Allow Changing Answers
+                  </label>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Let students revise their answers within the exam duration
+                  </p>
+                </div>
               </div>
-            )}
+            </div>
 
-            <div className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
-              <input
-                type="checkbox"
-                id="can_change_answer"
-                name="can_change_answer"
-                checked={formData.can_change_answer}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="can_change_answer" className="ml-2 block text-sm text-gray-700 cursor-pointer">
-                Allow students to change their answers during the exam
-              </label>
+            <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="flex flex-col">
+                <label className="font-medium text-gray-700 mb-1">
+                  Question Display
+                </label>
+                <div className="space-y-3 mt-2">
+                  <div className="flex items-center">
+                    <input
+                      id="pagination_all"
+                      name="pagination_type"
+                      type="radio"
+                      value="all"
+                      checked={formData.pagination_type === 'all'}
+                      onChange={() => setFormData({ ...formData, pagination_type: 'all' })}
+                      className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <label htmlFor="pagination_all" className="ml-3 text-sm text-gray-700">
+                      Show all questions on a single page
+                    </label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      id="pagination_one"
+                      name="pagination_type"
+                      type="radio"
+                      value="one_per_page"
+                      checked={formData.pagination_type === 'one_per_page'}
+                      onChange={() => setFormData({ ...formData, pagination_type: 'one_per_page' })}
+                      className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <label htmlFor="pagination_one" className="ml-3 text-sm text-gray-700">
+                      Show one question per page
+                    </label>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Determine how questions are displayed to students
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -1753,6 +1783,28 @@ const CreateExam = () => {
   // Render Questions Tab
   const renderQuestionsTab = () => (
     <div className="space-y-8">
+      {/* Questions Guide */}
+      <div className="mb-6 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-md">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <FiHelpCircle className="h-5 w-5 text-yellow-500" />
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-yellow-800">Questions Selection Guide</h3>
+            <div className="mt-2 text-sm text-yellow-700">
+              <p className="mb-2">Important information about adding questions:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Required:</strong> At least one question must be added</li>
+                <li><strong>Recommended:</strong> Add five or more questions for a comprehensive exam</li>
+                <li><strong>Marks:</strong> You can assign different mark values to each question</li>
+                <li><strong>Order:</strong> Questions will appear in the order shown (unless shuffling is enabled)</li>
+                <li><strong>Search:</strong> Use the filters below to find relevant questions from the question bank</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-5 flex items-center gap-2">
           <FiCheckCircle className="text-blue-500" />
@@ -2022,7 +2074,23 @@ const CreateExam = () => {
 
           <button
             type="button"
-            onClick={handleSubmit}
+            onClick={() => {
+              // Open confirmation modal instead of direct submission
+              const cautions = [];
+              if (!formData.description) cautions.push('Exam description is empty');
+              if (!formData.syllabus) cautions.push('Exam syllabus information is empty');
+              if (formData.negative_marking && formData.negative_percentage <= 0) cautions.push('Negative marking is enabled but percentage is set to 0');
+              if (selectedQuestions.length < 5) cautions.push('Exam has fewer than 5 questions');
+              if (formData.duration_minutes < 10) cautions.push('Exam duration is very short (less than 10 minutes)');
+              
+              setModalData({
+                title: 'Confirm Exam Creation',
+                message: 'Are you sure you want to create this exam? Once created, it will be available according to the specified start date.',
+                cautions,
+                onConfirm: handleSubmit
+              });
+              setShowConfirmModal(true);
+            }}
             disabled={isSubmitting}
             className="px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-1 sm:gap-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
           >
@@ -2041,6 +2109,27 @@ const CreateExam = () => {
         </div>
       </div>
 
+      {/* Instructions Panel */}
+      <div className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-md">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <FiInfo className="h-5 w-5 text-blue-500" />
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-blue-800">Instructions for Creating an Exam</h3>
+            <div className="mt-2 text-sm text-blue-700">
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Required fields</strong> are marked with an asterisk (*)</li>
+                <li>Fill out the <strong>Details</strong> tab with basic exam information</li>
+                <li>Configure exam settings in the respective tabs</li>
+                <li>Add questions from the question bank in the <strong>Questions</strong> tab</li>
+                <li>Review all information before submitting</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <div className="mb-8">
         {/* Horizontal Tab Navigation */}
         <div className="border-b border-gray-200 mb-4 sm:mb-6">
@@ -2151,7 +2240,52 @@ const CreateExam = () => {
           </div>
         </div>
       </div>
-    </div>
+      
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center mb-4">
+              <FiAlertTriangle className="text-amber-500 h-6 w-6 mr-3" />
+              <h3 className="text-lg font-medium text-gray-900">{modalData.title}</h3>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700 mb-4">{modalData.message}</p>
+              
+              {modalData.cautions.length > 0 && (
+                <div className="bg-amber-50 p-3 rounded-md mb-4">
+                  <h4 className="text-sm font-medium text-amber-800 mb-2">Please review these cautions:</h4>
+                  <ul className="list-disc pl-5 text-sm text-amber-700 space-y-1">
+                    {modalData.cautions.map((caution, index) => (
+                      <li key={index}>{caution}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  if (modalData.onConfirm) modalData.onConfirm();
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
     </div>
   );
 };

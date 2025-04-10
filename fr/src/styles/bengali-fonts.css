@@ -1,0 +1,79 @@
+/* Bengali Font Styles */
+
+/* Bengali font stack - using reliable Bengali fonts */
+:root {
+  --font-bengali: 'Hind Siliguri', 'Bengali System', system-ui, sans-serif;
+  --font-english: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Direct Bengali character selector */
+*:not(script):not(style):not(svg) > *:has([\u0980-\u09FF]),
+*:not(script):not(style):not(svg):has([\u0980-\u09FF]) {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Apply to elements with Bengali language attribute */
+[lang="bn"],
+[data-has-bengali="true"] {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Apply to specific Bengali content classes */
+.bengali-content,
+.bangla-text,
+.contains-bengali-text {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Force Bengali font for question text */
+.question-text:has([lang="bn"]),
+.question-text:has([\u0980-\u09FF]) {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Apply to all spans containing Bengali characters */
+span:has([\u0980-\u09FF]),
+span:matches([\u0980-\u09FF]) {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Ensure Bengali text in options gets the correct font */
+.option-content:has([lang="bn"]),
+.option-content:has([\u0980-\u09FF]) {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Override for specific elements */
+.question-card .question-text,
+.question-card .option-content,
+.question-card [data-has-bengali="true"] {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Force Bengali font for specific elements */
+[data-contains-bengali="true"],
+[data-has-bengali="true"] {
+  font-family: var(--font-bengali) !important;
+}
+
+/* Ensure English text uses Inter font */
+.english-text {
+  font-family: var(--font-english) !important;
+}
+
+/* Ensure math symbols use KaTeX fonts */
+.katex .mord, .katex .mbin, .katex .mrel, .katex .mopen, .katex .mclose, 
+.katex .mpunct, .katex .minner, .katex .mop {
+  font-family: KaTeX_Main, var(--font-english) !important;
+}
+
+/* Ensure fractions and other math elements use KaTeX fonts */
+.katex .mfrac, .katex .msupsub, .katex .mroot, .katex .msqrt, .katex .mtable {
+  font-family: KaTeX_Main, var(--font-english) !important;
+}
+
+/* Additional direct Bengali text selectors */
+.katex [data-has-bengali="true"],
+.katex span:has([\u0980-\u09FF]) {
+  font-family: var(--font-bengali) !important;
+}

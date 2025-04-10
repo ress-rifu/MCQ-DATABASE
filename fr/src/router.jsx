@@ -21,6 +21,7 @@ import { RouteErrorBoundary } from './components/ErrorBoundary';
 import ErrorPage from './Pages/ErrorPage';
 import ExamplesPage from './Pages/ExamplesPage';
 import LatexTableConverter from './components/LatexTableConverter';
+import TestLatexTable from './Pages/TestLatexTable';
 import { AuthProvider } from './hooks/useAuth.jsx';
 import { AdminRoute, AdminTeacherRoute, NonStudentRoute } from './components/ProtectedRoutes';
 
@@ -91,6 +92,11 @@ const router = createBrowserRouter([
             {
                 path:"/latex-converter" ,
                 element: <AdminTeacherRoute><LatexTableConverter></LatexTableConverter></AdminTeacherRoute>,
+                errorElement: <RouteErrorBoundary />,
+            },
+            {
+                path:"/test-latex-table" ,
+                element: <TestLatexTable></TestLatexTable>,
                 errorElement: <RouteErrorBoundary />,
             },
             {
