@@ -12,10 +12,10 @@ html, body {
 /* Font settings for Bengali and English text */
 :root {
   --font-english: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-bengali: 'Tiro Bangla', sans-serif;
+  --font-bengali: 'Hind Siliguri', 'Bengali System', system-ui, sans-serif;
 }
 
-/* Apply Tiro Bangla ONLY to Bengali text */
+/* Apply Hind Siliguri ONLY to Bengali text */
 .bangla-text {
   font-family: var(--font-bengali) !important;
 }

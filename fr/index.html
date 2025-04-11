@@ -12,11 +12,21 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
     rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
 </head>
 
 <style>
   * {
     font-family: "Inter", sans-serif;
+  }
+  
+  /* Allow Bengali text to use Hind Siliguri font */
+  [lang="bn"],
+  .bangla-text,
+  *:has([\u0980-\u09FF]) {
+    font-family: "Hind Siliguri", "Bengali System", system-ui, sans-serif !important;
   }
 </style>
 

@@ -509,6 +509,15 @@ const Overview = () => {
       // Run API test to debug
       console.log('Running API test...');
       await testApiEndpoints();
+      
+      // Verify authentication token is available
+      const token = localStorage.getItem('token');
+      console.log('Auth token available in Overview:', !!token);
+      if (!token) {
+        console.error('No authentication token found. User may need to log in again.');
+        toast.error('Authentication error. Please log in again.');
+        return;
+      }
 
       // Set loading states
       setIsActivityLoading(true);
@@ -528,31 +537,51 @@ const Overview = () => {
       console.log('Making API calls with headers:', getAuthHeader());
 
       // Direct API calls for debugging
-      const questionsStatsResponse = await axios.get(`${API_BASE_URL}/api/questions/stats`).catch(err => {
+      const questionsStatsResponse = await axios.get(`${API_BASE_URL}/api/questions/stats`, {
+        headers: getAuthHeader(),
+        withCredentials: true
+      }).catch(err => {
         console.error('Error fetching questions stats:', err);
-        return { data: {
-          totalQuestions: 0,
-          totalSubjects: 0,
-          totalChapters: 0,
-          totalTopics: 0,
-          monthlyUploads: 0,
-          userUploads: 0
-        }};
+        return { data: { totalQuestions: 0, monthlyUploads: 0, totalSubjects: 0, totalChapters: 0 } };
       });
 
-      const curriculumCountResponse = await axios.get(`${API_BASE_URL}/api/curriculum/count`).catch(err => {
+      const curriculumCountResponse = await axios.get(`${API_BASE_URL}/api/curriculum/count`, {
+        headers: getAuthHeader(),
+        withCredentials: true
+      }).catch(err => {
         console.error('Error fetching curriculum count:', err);
         return { data: { count: 0 } };
       });
 
       const usersCountResponse = user?.role === 'admin' ?
-        await axios.get(`${API_BASE_URL}/api/users/count`).catch(err => {
+        await axios.get(`${API_BASE_URL}/api/users/count`, {
+          headers: getAuthHeader(),
+          withCredentials: true
+        }).catch(err => {
           console.error('Error fetching users count:', err);
+          if (err.response && err.response.status === 403) {
+            console.error('Authentication error (403 Forbidden). Token may be invalid or missing.');
+            // Try with direct token as fallback
+            const token = localStorage.getItem('token');
+            if (token) {
+              console.log('Retrying with direct token from localStorage...');
+              return axios.get(`${API_BASE_URL}/api/users/count`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+                withCredentials: true
+              }).catch(retryErr => {
+                console.error('Retry also failed:', retryErr);
+                return { data: { count: 0 } };
+              });
+            }
+          }
           return { data: { count: 0 } };
         }) :
         { data: { count: '-' } };
 
-      const activityResponse = await axios.get(`${API_BASE_URL}/api/activity/recent`).catch(err => {
+      const activityResponse = await axios.get(`${API_BASE_URL}/api/activity/recent`, {
+        headers: getAuthHeader(),
+        withCredentials: true
+      }).catch(err => {
         console.error('Error fetching activity:', err);
         return { data: { activities: [] } };
       });

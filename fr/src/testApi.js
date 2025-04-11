@@ -5,15 +5,43 @@ import { API_BASE_URL, getAuthHeader } from './apiConfig';
 // Helper function to make authenticated API calls
 const callApi = async (endpoint) => {
   try {
-    const authHeader = getAuthHeader();
-    console.log('Using auth header:', authHeader);
+    // Get token directly from localStorage as a fallback mechanism
+    const token = localStorage.getItem('token');
+    
+    // Create auth header
+    let authHeader = getAuthHeader();
+    
+    // Log authentication details for debugging
+    console.log(`Testing endpoint: ${endpoint}`);
+    console.log('Token available:', !!token);
+    console.log('Auth header from getAuthHeader():', authHeader);
+    
+    // Ensure we have Authorization in the header
+    if (!authHeader.Authorization && token) {
+      console.log('Using direct token from localStorage');
+      authHeader = { 'Authorization': `Bearer ${token}` };
+    }
+    
+    // Final check - if we still don't have an Authorization header, log a warning
+    if (!authHeader.Authorization) {
+      console.warn('⚠️ No Authorization header available for API call');
+    } else {
+      console.log('✅ Using Authorization header:', authHeader.Authorization.substring(0, 15) + '...');
+    }
     
     const response = await axios.get(`${API_BASE_URL}${endpoint}`, {
-      headers: authHeader
+      headers: authHeader,
+      withCredentials: true // Include cookies if any
     });
+    
+    console.log(`✅ ${endpoint} call successful:`, response.status);
     return response.data;
   } catch (error) {
-    console.error(`Error calling ${endpoint}:`, error);
+    console.error(`❌ Error calling ${endpoint}:`, error.response ? error.response.status : error.message);
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response headers:', error.response.headers);
+    }
     return null;
   }
 };

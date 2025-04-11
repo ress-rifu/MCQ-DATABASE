@@ -35,7 +35,10 @@ const useAxiosWithErrorHandling = (options = {}) => {
     withCredentials = false,
   } = options;
   
-  const { getAuthHeader } = useAuth() || {};
+  // Get auth context
+  const authContext = useAuth();
+  // Safely access getAuthHeader
+  const getAuthHeader = authContext?.getAuthHeader || (() => ({}));
   const { withErrorHandling, isLoading, error, isEndpointLimited } = useErrorHandling();
   
   // Track pending requests to prevent duplicates
@@ -77,15 +80,29 @@ const useAxiosWithErrorHandling = (options = {}) => {
       // Add to request config so we can access it in response interceptors
       config.__completeRequest = completeRequest;
       
-      // Add auth headers if available
-      if (getAuthHeader) {
+      // Always attempt to add auth headers
+      try {
         const authHeader = getAuthHeader();
-        if (authHeader.Authorization) {
+        if (authHeader && authHeader.Authorization) {
           config.headers = {
             ...config.headers,
             ...authHeader,
           };
+          console.log('Added auth header to request:', config.url);
+        } else {
+          console.warn('No valid auth header available for request:', config.url);
+          // Try to get token directly from localStorage as a fallback
+          const token = localStorage.getItem('token');
+          if (token) {
+            config.headers = {
+              ...config.headers,
+              'Authorization': `Bearer ${token}`
+            };
+            console.log('Added fallback auth header to request:', config.url);
+          }
         }
+      } catch (error) {
+        console.error('Error adding auth headers:', error);
       }
       return config;
     },

@@ -13,7 +13,7 @@ const TestLatexTable = () => {
       \\hline
       \\text{Font Test} & \\text{ফন্ট টেস্ট} \\\\
       \\hline
-      \\text{Inter Font} & \\text{টিরো বাংলা ফন্ট} \\\\
+      \\text{Inter Font} & \\text{হিন্দ সিলিগুড়ি ফন্ট} \\\\
       \\hline
       x^2 + y^2 = z^2 & \\text{গণিত সমীকরণ} \\\\
       \\hline
@@ -21,7 +21,7 @@ const TestLatexTable = () => {
   `);
 
   // Sample Bengali text for testing
-  const bengaliSample = "বাংলা টেক্সট এখানে টিরো বাংলা ফন্টে দেখানো হবে";
+  const bengaliSample = "বাংলা টেক্সট এখানে হিন্দ সিলিগুড়ি ফন্টে দেখানো হবে";
   
   // Sample mixed text
   const mixedSample = "This is English text with some বাংলা টেক্সট mixed in between.";
@@ -42,7 +42,7 @@ const TestLatexTable = () => {
           </div>
           
           <div className="mb-6">
-            <h3 className="text-lg font-medium mb-2">Bengali Text (Tiro Bangla Font)</h3>
+            <h3 className="text-lg font-medium mb-2">Bengali Text (Hind Siliguri Font)</h3>
             <p className="bangla-text p-3 border rounded">
               {bengaliSample}
             </p>

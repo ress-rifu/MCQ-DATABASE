@@ -38,7 +38,7 @@ body, html {
   font-family: var(--font-bengali) !important;
 }
 
-/* Remove the has-bengali class that was applying Tiro Bangla to everything */
+/* Remove the has-bengali class that was applying font to everything */
 .has-bengali {
   /* No font-family here - we'll handle Bengali text with more specific selectors */
 }

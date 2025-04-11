@@ -19,14 +19,14 @@
 .bengali-content [lang="bn"],
 .question-text:has([lang="bn"]),
 .bengali-content:has([lang="bn"]) {
-  font-family: 'Tiro Bangla', sans-serif !important;
+  font-family: 'Hind Siliguri', 'Bengali System', system-ui, sans-serif !important;
 }
 
-/* Force Bengali text in question cards to use Tiro Bangla */
+/* Force Bengali text in question cards to use Hind Siliguri */
 .question-text:has(span:matches([\u0980-\u09FF])),
 .option-content:has(span:matches([\u0980-\u09FF])),
 .bengali-content span:matches([\u0980-\u09FF]) {
-  font-family: 'Tiro Bangla', sans-serif !important;
+  font-family: 'Hind Siliguri', 'Bengali System', system-ui, sans-serif !important;
 }
 
 /* Style for English text */
@@ -45,7 +45,7 @@
 }
 
 .english-text .bangla-text {
-  font-family: 'Tiro Bangla', sans-serif !important;
+  font-family: 'Hind Siliguri', 'Bengali System', system-ui, sans-serif !important;
 }
 
 .latex-table {
@@ -109,7 +109,7 @@
 .katex .bangla-text,
 .katex-display .bangla-text,
 .katex-html .bangla-text {
-  font-family: 'Tiro Bangla', sans-serif !important;
+  font-family: 'Hind Siliguri', 'Bengali System', system-ui, sans-serif !important;
 }
 
 .katex .english-text,

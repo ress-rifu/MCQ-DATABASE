@@ -1,30 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { AuthProvider } from '../hooks/useAuth.jsx';
+import { useAuth } from '../hooks/useAuth.jsx';
 
-// Wrap components that need AuthProvider
-const withAuth = (Component) => {
-  return (
-    <AuthProvider>
-      {Component}
-    </AuthProvider>
-  );
-};
+
 
 // Protected route component for admin/teacher routes
 export const AdminTeacherRoute = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, isLoading } = useAuth();
 
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-    setLoading(false);
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
@@ -32,23 +16,14 @@ export const AdminTeacherRoute = ({ children }) => {
     return <Navigate to="/exams" replace />;
   }
 
-  return withAuth(children);
+  return children;
 };
 
 // Protected route component for admin-only routes
 export const AdminRoute = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, isLoading } = useAuth();
 
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-    setLoading(false);
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
@@ -56,23 +31,14 @@ export const AdminRoute = ({ children }) => {
     return <Navigate to="/exams" replace />;
   }
 
-  return withAuth(children);
+  return children;
 };
 
 // Protected route component for non-student routes
 export const NonStudentRoute = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, isLoading } = useAuth();
 
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-    setLoading(false);
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
@@ -80,5 +46,5 @@ export const NonStudentRoute = ({ children }) => {
     return <Navigate to="/leaderboard" replace />;
   }
 
-  return withAuth(children);
+  return children;
 }; 

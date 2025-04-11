@@ -131,8 +131,8 @@ const LaTeXRenderer = ({ content, className = '' }) => {
     return bengaliPattern.test(text);
   };
   
-  // Apply Tiro Bangla font ONLY to Bengali text within an element
-  const applyTiroBanglaToElement = (element) => {
+  // Apply Hind Siliguri font ONLY to Bengali text within an element
+  const applyHindSiliguriToElement = (element) => {
     if (!element) return;
     
     // Only add the class if the element itself contains Bengali text
@@ -422,7 +422,7 @@ const LaTeXRenderer = ({ content, className = '' }) => {
         // After processing the content, ensure the correct font is applied
         if (containerRef.current) {
           // Apply our improved font handling to the entire container
-          applyBengaliFont(containerRef.current);
+          applyHindSiliguriToElement(containerRef.current);
           
           // Special handling for KaTeX elements
           const katexElements = containerRef.current.querySelectorAll('.katex, .katex-display, .katex-html');
